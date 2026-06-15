@@ -1,0 +1,12 @@
+{
+  "name": "@dhis2/skill-example",
+  "version": "0.0.1",
+  "description": "Example AI skill for DHIS2",
+  "license": "BSD-3-Clause",
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./src/index.md"
+  }
+}

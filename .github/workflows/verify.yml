@@ -1,0 +1,44 @@
+name: Verify
+
+on:
+  push:
+  pull_request:
+    types: ["opened", "edited", "synchronize", "reopened", "labeled"]
+
+concurrency: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: pnpm
+
+      - name: Install Dependencies
+        run: pnpm install
+
+      - name: Format check
+        run: pnpm lint
+
+      - name: Check changesets added
+        if: ${{ github.event.pull_request.base.ref != '' }}
+        run: pnpm changeset status --since=origin/${{ github.event.pull_request.base.ref }}
+
+  lint-pr-title:
+    name: Lint PR title
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
