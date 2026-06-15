@@ -49,6 +49,29 @@ the API shape before building the UI.
 | Build a dashboard or detail page with widgets                              | `references/data-fetching.md` → `references/ui-patterns/widget.md` → `references/ui-patterns/dashboards.md` |
 | Build or style any UI component                                            | `references/ui-patterns.md`                                                                                 |
 | Handle API differences across DHIS2 versions                               | `references/data-fetching.md` (§ Feature flags)                                                             |
+| Type API responses with DHIS2 types                                        | `references/types.md`                                                                                       |
+| Write tests for hooks or components                                        | `references/testing.md`                                                                                     |
+
+## How to work in this codebase
+
+Before writing code, always read `CLAUDE.md` (or equivalent agent file) in the project root if it exists — it contains app-specific decisions, conventions, and structure that override general patterns.
+
+**As you work:**
+
+- **Write tests for new features and helper functions.** Read `references/testing.md` for patterns. Tests live alongside source files (e.g. `useApps.test.ts` next to `useApps.ts`).
+- **Comment complex or non-obvious logic.** A comment should explain _why_ something works the way it does — a hidden constraint, a DHIS2 quirk, a workaround for a known bug. Skip comments that just restate the code.
+- **Prefer legible code.** Use `Boolean(value)` rather than `!!value`, named variables for complex conditions, and explicit returns over ternary chains. Write for the next developer, not for brevity.
+- **Keep `CLAUDE.md` up to date.** After adding a new feature, hook, or architectural decision, update `CLAUDE.md` with what was built and why. If there's no `CLAUDE.md`, create one. This is how future sessions (and teammates) understand the codebase.
+
+**Library versions:**
+
+Always use the latest stable versions of the core libraries unless the user specifies otherwise. LLM training data tends to lag — check `package.json` for the installed version, then fetch the source at that version with opensrc before writing code.
+
+| Library                  | Notes                                                             |
+| ------------------------ | ----------------------------------------------------------------- |
+| `@dhis2/ui`              | Check installed version in `package.json` before fetching source  |
+| `@dhis2/app-runtime`     | Provides `useDataEngine`, `useConfig`, `useAlert`, `useDataQuery` |
+| `@dhis2/cli-app-scripts` | The build tool — scaffold command uses the latest by default      |
 
 ## Rules
 

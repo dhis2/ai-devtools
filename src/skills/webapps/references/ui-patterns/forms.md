@@ -135,6 +135,80 @@ const DataElementForm = ({ onSubmit, isPending }: DataElementFormProps) => {
 }
 ```
 
+## Help text and placeholders
+
+`InputField` accepts `helpText` for instructional copy beneath the field and `placeholder`
+for greyed-out hint text inside the input. Both are optional but improve usability for
+non-obvious fields:
+
+```tsx
+<InputField
+    label={i18n.t('Short name')}
+    helpText={i18n.t('Used in exports and reports. Max 50 characters.')}
+    placeholder={i18n.t('e.g. Facility count')}
+    onChange={({ value }) => field.onChange(value)}
+    {...field}
+/>
+```
+
+Use `helpText` for constraints or context the label alone can't convey. Use `placeholder`
+sparingly — it disappears when the user types and shouldn't carry information that's needed
+after that point.
+
+## Async select options
+
+When select options come from the API, always guard against the options not being loaded yet.
+A `SingleSelectField` with a `selected` value that doesn't exist in the rendered options
+list shows a blank selection — confusing to users.
+
+Pattern: fetch options, show `loading` state on the field while fetching, and only render
+`SingleSelectOption` children once data is available. Pass `selected` at all times — the
+field handles the case where the matching option hasn't rendered yet as long as you keep
+`loading` true until it has.
+
+```tsx
+import { CircularLoader, SingleSelectField, SingleSelectOption } from '@dhis2/ui'
+
+// In a parent component or hook:
+const { data, isLoading } = useValueTypes() // fetches from DHIS2 API
+
+// Render:
+<Controller
+    name="valueType"
+    control={control}
+    render={({ field, fieldState }) => (
+        <SingleSelectField
+            label={i18n.t('Value type')}
+            helpText={i18n.t('Determines what kind of data can be entered.')}
+            selected={field.value}
+            onChange={({ selected }) => field.onChange(selected)}
+            error={Boolean(fieldState.error)}
+            validationText={fieldState.error?.message}
+            loading={isLoading}
+        >
+            {data?.valueTypes.map((vt) => (
+                <SingleSelectOption
+                    key={vt.id}
+                    label={vt.displayName}
+                    value={vt.id}
+                />
+            ))}
+        </SingleSelectField>
+    )}
+/>
+```
+
+Check `SingleSelectField`'s actual props with opensrc before use — the `loading` prop
+renders a spinner inside the dropdown and disables selection while options are in flight.
+If the version in use doesn't have `loading`, disable the field with `disabled={isLoading}`
+and render a `CircularLoader` alongside it instead.
+
+> **Avoid setting a default `selected` value before options load.** If you prefill
+> `defaultValues` in React Hook Form with an id that doesn't yet exist in the rendered
+> options, the select shows a blank. Either set `defaultValues` to `''` and patch in the
+> real value once data arrives (`reset()` or `setValue()`), or wait until options are loaded
+> before rendering the form at all.
+
 ## Modal vs. dedicated page
 
 Match form complexity to its container. Simple, low-field forms (e.g. rename, quick
