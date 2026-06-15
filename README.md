@@ -22,4 +22,4 @@ pnpm lint           # check formatting
 pnpm changeset      # record a changeset before opening a PR
 ```
 
-See [AGENT.md](./AGENT.md) for repo structure and release flow details.
+See [CLAUDE.md](./CLAUDE.md) for repo structure and release flow details.
