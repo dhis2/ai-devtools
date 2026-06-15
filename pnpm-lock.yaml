@@ -17,6 +17,9 @@ importers:
       '@commitlint/config-conventional':
         specifier: ^19.0.0
         version: 19.8.1
+      '@dhis2/config-prettier':
+        specifier: ^0.2.2
+        version: 0.2.2(prettier@3.8.4)
       changeset-conventional-commits:
         specifier: ^0.2.5
         version: 0.2.5
@@ -31,6 +34,8 @@ importers:
         version: 3.8.4
 
   src/skills/example-skill: {}
+
+  src/skills/webapps: {}
 
 packages:
 
@@ -190,6 +195,11 @@ packages:
   '@commitlint/types@19.8.1':
     resolution: {integrity: sha512-/yCrWGCoA1SVKOks25EGadP9Pnj0oAIHGpl2wH2M2Y46dPM2ueb8wyCVOD7O3WCTkaJ0IkKvzhl1JY7+uCT2Dw==}
     engines: {node: '>=v18'}
+
+  '@dhis2/config-prettier@0.2.2':
+    resolution: {integrity: sha512-2r0lfD3sUZa2WYYIyi76XyDmI5hemP1Yaz9bfjKBvEW4kQFAnQcf+d1lB0i97+Jnj17TtfMABLjQZgWdhXK6LA==}
+    peerDependencies:
+      prettier: '>=3.0.0'
 
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
@@ -1290,6 +1300,10 @@ snapshots:
     dependencies:
       '@types/conventional-commits-parser': 5.0.2
       chalk: 5.6.2
+
+  '@dhis2/config-prettier@0.2.2(prettier@3.8.4)':
+    dependencies:
+      prettier: 3.8.4
 
   '@inquirer/external-editor@1.0.3(@types/node@12.20.55)':
     dependencies:
