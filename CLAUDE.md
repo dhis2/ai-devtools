@@ -1,6 +1,6 @@
 # ai-devtools
 
-A pnpm monorepo for publishing AI skills as standalone npm packages under the `@dhis2` scope.
+A pnpm monorepo for publishing AI development tools under the `@dhis2` scope.
 
 ## Structure
 
@@ -28,14 +28,18 @@ All packages two levels deep under `src/` are automatically picked up by `src/*/
 - **Formatting**: Prettier (enforced on commit via husky + lint-staged)
 - **CI**: GitHub Actions — verify on every push/PR, release on push to `main`
 
-## Adding a new skill
+## Adding a new package
 
 1. Create a new directory under `src/<namespace>/<package-name>/`
 2. Add a `package.json` following the pattern in `src/skills/example-skill/`
 3. Write the package content in `src/<namespace>/<package-name>/src/`
-4. Run `pnpm changeset` to record a changeset for the new package
+4. If the package should be published to npm, run `pnpm changeset` to record a changeset
 
 Package naming convention: `@dhis2/<namespace>-<name>` (e.g. `@dhis2/skill-example`, `@dhis2/mcp-dhis2`)
+
+### Skills (`src/skills/*`)
+
+Skills are distributed via GitHub (users run `npx skills add dhis2/ai-devtools`) — npm publishing is not used. Changesets are ignored for `@dhis2/skill-*` packages. **Do not run `pnpm changeset` for skill changes.**
 
 ## Release flow
 
