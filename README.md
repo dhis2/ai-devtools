@@ -14,6 +14,19 @@ Packages live under `src/<namespace>/<name>` and are published to npm under the 
 
 > **Attribution** — `@dhis2/skill-webapps` is based on [dhis2-app-skills](https://github.com/devotta-labs/dhis2-app-skills) by [Eirik Haugstulen](https://github.com/eirikur-haugstulen) at [Devotta Labs](https://github.com/devotta-labs).
 
+## Install skills
+
+```sh
+# All skills (interactive prompt to select)
+npx skills add dhis2/ai-devtools
+
+# A specific skill by name
+npx skills add dhis2/ai-devtools --skill webapps
+
+# A specific skill by path
+npx skills add https://github.com/dhis2/ai-devtools/tree/main/src/skills/webapps
+```
+
 ## Contributing
 
 ```sh

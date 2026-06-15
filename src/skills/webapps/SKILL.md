@@ -1,5 +1,5 @@
 ---
-name: dhis2-app-development
+name: webapps
 description: >
     Guide for building DHIS2 custom applications using the DHIS2 App Platform.
     Use this skill whenever the user wants to create, scaffold, or bootstrap a DHIS2 app,
