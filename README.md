@@ -8,9 +8,11 @@ For guidance on using AI agents to build DHIS2 applications, see the [AI-assiste
 
 Packages live under `src/<namespace>/<name>` and are published to npm under the `@dhis2` scope.
 
-| Namespace | Purpose                       |
-| --------- | ----------------------------- |
-| `skills`  | Claude Code skill definitions |
+| Package                                        | Description                                  |
+| ---------------------------------------------- | -------------------------------------------- |
+| [`@dhis2/skill-webapps`](./src/skills/webapps) | AI skill for building DHIS2 web applications |
+
+> **Attribution** — `@dhis2/skill-webapps` is based on [dhis2-app-skills](https://github.com/devotta-labs/dhis2-app-skills) by [Eirik Haugstulen](https://github.com/eirikur-haugstulen) at [Devotta Labs](https://github.com/devotta-labs).
 
 ## Contributing
 

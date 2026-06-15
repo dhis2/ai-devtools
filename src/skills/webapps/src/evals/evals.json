@@ -1,0 +1,188 @@
+{
+  "skill_name": "dhis2-app-dev",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "I need to create a new DHIS2 app called 'facility-registry' for managing health facilities. It should use TypeScript. I have a local DHIS2 instance running.",
+      "expected_output": "A fully scaffolded DHIS2 app with correct scaffold command, TanStack Query for data fetching, hash router, and popstate sync",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-d2-scaffold",
+          "type": "content_check",
+          "description": "Uses pnpm create @dhis2/app@latest to scaffold (not create-react-app, @dhis2/cli-app-scripts init, or similar)"
+        },
+        {
+          "name": "uses-tanstack-query",
+          "type": "content_check",
+          "description": "Installs @tanstack/react-query@4 (not v5) AND uses TanStack Query for data fetching rather than useDataQuery from @dhis2/app-runtime directly"
+        },
+        {
+          "name": "hash-router",
+          "type": "content_check",
+          "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+        },
+        {
+          "name": "popstate-sync",
+          "type": "content_check",
+          "description": "Dispatches popstate events on route changes so the DHIS2 Global Shell URL stays in sync — any implementation that calls dispatchEvent(new PopStateEvent('popstate')) in response to route/location changes"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "Hey, I want to build a custom app for our DHIS2 instance to track vaccine supply chain data. We're running DHIS2 2.40. Where do I start?",
+      "expected_output": "Step-by-step bootstrapping with correct scaffold command, TanStack Query integration, hash router, and popstate sync",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-d2-scaffold",
+          "type": "content_check",
+          "description": "Uses pnpm create @dhis2/app@latest to scaffold (not create-react-app, @dhis2/cli-app-scripts init, or similar)"
+        },
+        {
+          "name": "uses-tanstack-query",
+          "type": "content_check",
+          "description": "Installs @tanstack/react-query@4 (not v5) AND uses TanStack Query for data fetching rather than useDataQuery from @dhis2/app-runtime directly"
+        },
+        {
+          "name": "hash-router",
+          "type": "content_check",
+          "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+        },
+        {
+          "name": "popstate-sync",
+          "type": "content_check",
+          "description": "Dispatches popstate events on route changes so the DHIS2 Global Shell URL stays in sync — any implementation that calls dispatchEvent(new PopStateEvent('popstate')) in response to route/location changes"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Can you set up a new DHIS2 project for me? I need routing between a dashboard page and a details page, and I'll need to fetch data from the DHIS2 API.",
+      "expected_output": "Scaffolded project with routing, data fetching via TanStack Query, hash router, and popstate sync",
+      "files": [],
+      "assertions": [
+        {
+          "name": "uses-d2-scaffold",
+          "type": "content_check",
+          "description": "Uses pnpm create @dhis2/app@latest to scaffold (not create-react-app, @dhis2/cli-app-scripts init, or similar)"
+        },
+        {
+          "name": "uses-tanstack-query",
+          "type": "content_check",
+          "description": "Installs @tanstack/react-query@4 (not v5) AND uses TanStack Query for data fetching rather than useDataQuery from @dhis2/app-runtime directly"
+        },
+        {
+          "name": "hash-router",
+          "type": "content_check",
+          "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+        },
+        {
+          "name": "popstate-sync",
+          "type": "content_check",
+          "description": "Dispatches popstate events on route changes so the DHIS2 Global Shell URL stays in sync — any implementation that calls dispatchEvent(new PopStateEvent('popstate')) in response to route/location changes"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I have an existing DHIS2 app. I need a hook that fetches organisation units with their names and parent, and displays them in a list.",
+      "expected_output": "Agent fetches DHIS2 source with opensrc, reads the organisationUnit controller/DTO, then builds a custom hook using useApiDataQuery with fields parameter, metadata caching, and a component with loading/error handling",
+      "files": [],
+      "assertions": [
+        {
+          "name": "fetches-source-with-opensrc",
+          "type": "content_check",
+          "description": "Runs npx opensrc path dhis2/dhis2-core (or the source is already cached in ~/.opensrc) and reads the relevant controller/DTO before writing the hook — verifying the API contract from source rather than guessing"
+        },
+        {
+          "name": "uses-useApiDataQuery",
+          "type": "content_check",
+          "description": "Uses useApiDataQuery (the TanStack Query wrapper) for the fetch — not useDataQuery from @dhis2/app-runtime directly"
+        },
+        {
+          "name": "metadata-caching",
+          "type": "content_check",
+          "description": "Sets cacheTime and staleTime to Infinity (or equivalent aggressive caching) since organisation units are metadata"
+        },
+        {
+          "name": "fields-parameter",
+          "type": "content_check",
+          "description": "Uses the fields parameter to request only the needed properties (e.g. displayName, parent) rather than fetching full objects"
+        },
+        {
+          "name": "loading-error-handling",
+          "type": "content_check",
+          "description": "Handles both loading and error states in the component — shows a loader while fetching and an error message if the request fails"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I need to add the ability to delete a tracked entity from my DHIS2 app. The user should get confirmation that it worked or an error message.",
+      "expected_output": "Agent fetches DHIS2 source with opensrc, reads the tracker controller/DTO to verify the delete endpoint, then builds a mutation hook using useMutation from TanStack Query with useDataEngine, cache invalidation, alerts, and pending state",
+      "files": [],
+      "assertions": [
+        {
+          "name": "fetches-source-with-opensrc",
+          "type": "content_check",
+          "description": "Runs npx opensrc path dhis2/dhis2-core (or the source is already cached in ~/.opensrc) and reads the relevant controller/DTO before writing the mutation — verifying the API contract from source rather than guessing"
+        },
+        {
+          "name": "tanstack-useMutation",
+          "type": "content_check",
+          "description": "Uses useMutation from @tanstack/react-query (not a custom pattern or useDataMutation from @dhis2/app-runtime)"
+        },
+        {
+          "name": "useDataEngine-mutate",
+          "type": "content_check",
+          "description": "Uses useDataEngine from @dhis2/app-runtime and calls dataEngine.mutate() to perform the deletion"
+        },
+        {
+          "name": "cache-invalidation",
+          "type": "content_check",
+          "description": "Invalidates or removes related query cache after successful deletion using queryClient.invalidateQueries or queryClient.removeQueries"
+        },
+        {
+          "name": "user-feedback",
+          "type": "content_check",
+          "description": "Provides user feedback on success and failure — uses useAlert from @dhis2/app-service-alerts or equivalent visible confirmation/error messages"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I need to fetch program indicators from my DHIS2 2.41 instance and display them in a filterable table. The user should be able to search by name.",
+      "expected_output": "Agent fetches DHIS2 source at version 2.41 with opensrc, reads the programIndicators controller/DTO to verify endpoint shape and available query parameters, then builds a hook with useApiDataQuery, dynamic filter for search, fields parameter, and metadata caching",
+      "files": [],
+      "assertions": [
+        {
+          "name": "fetches-source-with-opensrc",
+          "type": "content_check",
+          "description": "Runs npx opensrc path dhis2/dhis2-core@2.41 (targeting the correct version) and reads the programIndicators controller/DTO before writing the hook"
+        },
+        {
+          "name": "uses-useApiDataQuery",
+          "type": "content_check",
+          "description": "Uses useApiDataQuery (the TanStack Query wrapper) for the fetch — not useDataQuery from @dhis2/app-runtime directly"
+        },
+        {
+          "name": "dynamic-search-filter",
+          "type": "content_check",
+          "description": "Builds a dynamic filter for the search — conditionally includes a displayName:ilike filter (or similar) based on the user's search input"
+        },
+        {
+          "name": "fields-parameter",
+          "type": "content_check",
+          "description": "Uses the fields parameter to request only the needed properties rather than fetching full program indicator objects"
+        },
+        {
+          "name": "metadata-caching",
+          "type": "content_check",
+          "description": "Sets cacheTime and staleTime to Infinity (or equivalent aggressive caching) since program indicators are metadata"
+        }
+      ]
+    }
+  ]
+}
