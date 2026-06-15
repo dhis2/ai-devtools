@@ -7,6 +7,6 @@
         "access": "public"
     },
     "exports": {
-        ".": "./src/SKILL.md"
+        ".": "./SKILL.md"
     }
 }
