@@ -1,15 +1,15 @@
 ---
 name: dhis2-app-development
 description: >
-  Guide for building DHIS2 custom applications using the DHIS2 App Platform.
-  Use this skill whenever the user wants to create, scaffold, or bootstrap a DHIS2 app,
-  run or start a DHIS2 app, build for production or deploy,
-  fetch data from the DHIS2 API, work with aggregate data, tracker data, metadata, or analytics,
-  write mutations, or handle version differences across DHIS2 instances.
-  Also use it when the user mentions DHIS2, d2, dhis2 app platform, or any DHIS2-specific
-  terminology — even if they don't explicitly say "DHIS2 app."
+    Guide for building DHIS2 custom applications using the DHIS2 App Platform.
+    Use this skill whenever the user wants to create, scaffold, or bootstrap a DHIS2 app,
+    run or start a DHIS2 app, build for production or deploy,
+    fetch data from the DHIS2 API, work with aggregate data, tracker data, metadata, or analytics,
+    write mutations, or handle version differences across DHIS2 instances.
+    Also use it when the user mentions DHIS2, d2, dhis2 app platform, or any DHIS2-specific
+    terminology — even if they don't explicitly say "DHIS2 app."
 allowed-tools:
-  - Bash(npx opensrc *)
+    - Bash(npx opensrc *)
 ---
 
 # DHIS2 Application Development

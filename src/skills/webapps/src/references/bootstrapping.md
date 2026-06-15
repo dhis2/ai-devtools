@@ -41,18 +41,18 @@ Replace the scaffolded config with:
 ```javascript
 /** @type {import('@dhis2/cli-app-scripts').D2Config} */
 const config = {
-  type: "app",
-  name: "<app-name>",
-  minDHIS2Version: "2.41",
+    type: 'app',
+    name: '<app-name>',
+    minDHIS2Version: '2.41',
 
-  entryPoints: {
-    app: "./src/App.tsx",
-  },
+    entryPoints: {
+        app: './src/App.tsx',
+    },
 
-  viteConfigExtensions: "./vite.config.mts",
-};
+    viteConfigExtensions: './vite.config.mts',
+}
 
-module.exports = config;
+module.exports = config
 ```
 
 ## Step 4: Create `vite.config.mts`
@@ -60,16 +60,16 @@ module.exports = config;
 Create this file in the project root:
 
 ```typescript
-import path from "path";
-import { defineConfig } from "vite";
+import path from 'path'
+import { defineConfig } from 'vite'
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, 'src'),
+        },
     },
-  },
-});
+})
 ```
 
 This enables `@/components/Foo` imports instead of relative paths.
@@ -80,12 +80,12 @@ Add the `paths` mapping so TypeScript resolves the `@` alias:
 
 ```json
 {
-  "compilerOptions": {
-    "jsx": "react-jsx", // Overwrite the default jsx setting from the scaffolder
-    "paths": {
-      "@/*": ["./src/*"]
+    "compilerOptions": {
+        "jsx": "react-jsx", // Overwrite the default jsx setting from the scaffolder
+        "paths": {
+            "@/*": ["./src/*"]
+        }
     }
-  }
 }
 ```
 
@@ -95,8 +95,8 @@ that the scaffolder set up.
 ## Step 6: Create `src/utils/SyncUrlWithGlobalShell.tsx`
 
 ```tsx
-import { useEffect } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router-dom'
 
 /*
  * When the app runs in the DHIS2 Global Shell, react-router@6+ no longer
@@ -109,14 +109,14 @@ import { Outlet, useLocation } from "react-router-dom";
  */
 
 export const SyncUrlWithGlobalShell = () => {
-  const location = useLocation();
+    const location = useLocation()
 
-  useEffect(() => {
-    dispatchEvent(new PopStateEvent("popstate"));
-  }, [location.key]);
+    useEffect(() => {
+        dispatchEvent(new PopStateEvent('popstate'))
+    }, [location.key])
 
-  return <Outlet />;
-};
+    return <Outlet />
+}
 ```
 
 This is a layout route component — it wraps all routes so the Global Shell URL stays
@@ -128,35 +128,35 @@ be a child of this layout.
 Replace the contents of `src/App.tsx` with:
 
 ```tsx
-import React from "react";
-import { createHashRouter, RouterProvider } from "react-router-dom";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { CssReset, CssVariables } from "@dhis2/ui";
-import { SyncUrlWithGlobalShell } from "@/utils/SyncUrlWithGlobalShell";
+import React from 'react'
+import { createHashRouter, RouterProvider } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { CssReset, CssVariables } from '@dhis2/ui'
+import { SyncUrlWithGlobalShell } from '@/utils/SyncUrlWithGlobalShell'
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient()
 
 const router = createHashRouter([
-  {
-    element: <SyncUrlWithGlobalShell />,
-    children: [
-      {
-        path: "/",
-        element: <div>Home</div>,
-      },
-    ],
-  },
-]);
+    {
+        element: <SyncUrlWithGlobalShell />,
+        children: [
+            {
+                path: '/',
+                element: <div>Home</div>,
+            },
+        ],
+    },
+])
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <CssReset />
-    <CssVariables theme spacers colors elevations />
-    <RouterProvider router={router} />
-  </QueryClientProvider>
-);
+    <QueryClientProvider client={queryClient}>
+        <CssReset />
+        <CssVariables theme spacers colors elevations />
+        <RouterProvider router={router} />
+    </QueryClientProvider>
+)
 
-export default App;
+export default App
 ```
 
 DHIS2 apps run inside an iframe in the DHIS2 shell, so use `createHashRouter` — not
@@ -175,34 +175,34 @@ of that layout.
 
 ```typescript
 export type PossiblyDynamic<Type, InputType> =
-  | Type
-  | ((input: InputType) => Type);
-export type QueryVariables = Record<string, unknown>;
+    | Type
+    | ((input: InputType) => Type)
+export type QueryVariables = Record<string, unknown>
 
-type QueryParameterSingularValue = string | number | boolean;
+type QueryParameterSingularValue = string | number | boolean
 interface QueryParameterAliasedValue {
-  [name: string]: QueryParameterSingularValue;
+    [name: string]: QueryParameterSingularValue
 }
 type QueryParameterSingularOrAliasedValue =
-  | QueryParameterSingularValue
-  | QueryParameterAliasedValue;
-type QueryParameterMultipleValue = QueryParameterSingularOrAliasedValue[];
+    | QueryParameterSingularValue
+    | QueryParameterAliasedValue
+type QueryParameterMultipleValue = QueryParameterSingularOrAliasedValue[]
 export type QueryParameterValue =
-  | QueryParameterSingularValue
-  | QueryParameterAliasedValue
-  | QueryParameterMultipleValue
-  | undefined;
+    | QueryParameterSingularValue
+    | QueryParameterAliasedValue
+    | QueryParameterMultipleValue
+    | undefined
 
 export interface QueryParameters {
-  pageSize?: number;
-  [key: string]: QueryParameterValue;
+    pageSize?: number
+    [key: string]: QueryParameterValue
 }
 
 export interface ResourceQuery {
-  resource: string;
-  id?: PossiblyDynamic<string, QueryVariables>;
-  data?: PossiblyDynamic<unknown, QueryVariables>;
-  params?: PossiblyDynamic<QueryParameters, QueryVariables>;
+    resource: string
+    id?: PossiblyDynamic<string, QueryVariables>
+    data?: PossiblyDynamic<unknown, QueryVariables>
+    params?: PossiblyDynamic<QueryParameters, QueryVariables>
 }
 ```
 
@@ -213,47 +213,47 @@ id, request body, and query parameters.
 ## Step 9: Create `src/utils/useApiDataQuery.ts`
 
 ```typescript
-import { useDataEngine } from "@dhis2/app-runtime";
+import { useDataEngine } from '@dhis2/app-runtime'
 import {
-  useQuery,
-  QueryFunction,
-  UseQueryOptions,
-  QueryKey,
-} from "@tanstack/react-query";
-import { ResourceQuery } from "../interfaces/apiQueryTypes";
+    useQuery,
+    QueryFunction,
+    UseQueryOptions,
+    QueryKey,
+} from '@tanstack/react-query'
+import { ResourceQuery } from '../interfaces/apiQueryTypes'
 
 type UseApiDataQueryProps<
-  TResultData,
-  TError = Error,
-  TData = TResultData,
-  TQueryKey extends QueryKey = QueryKey,
-> = Omit<UseQueryOptions<TResultData, TError, TData, TQueryKey>, "queryFn"> & {
-  query: ResourceQuery;
-};
+    TResultData,
+    TError = Error,
+    TData = TResultData,
+    TQueryKey extends QueryKey = QueryKey,
+> = Omit<UseQueryOptions<TResultData, TError, TData, TQueryKey>, 'queryFn'> & {
+    query: ResourceQuery
+}
 
 export const useApiDataQuery = <
-  TResultData,
-  TError = Error,
-  TData = TResultData,
-  TQueryKey extends QueryKey = QueryKey,
+    TResultData,
+    TError = Error,
+    TData = TResultData,
+    TQueryKey extends QueryKey = QueryKey,
 >({
-  query,
-  queryKey,
-  ...options
-}: UseApiDataQueryProps<TResultData, TError, TData, TQueryKey>) => {
-  const dataEngine = useDataEngine();
-
-  const queryFn: QueryFunction<TResultData, TQueryKey> = async () => {
-    const response = await dataEngine.query({ apiDataQuery: query });
-    return response.apiDataQuery as TResultData;
-  };
-
-  return useQuery<TResultData, TError, TData, TQueryKey>({
+    query,
     queryKey,
-    queryFn,
-    ...options,
-  });
-};
+    ...options
+}: UseApiDataQueryProps<TResultData, TError, TData, TQueryKey>) => {
+    const dataEngine = useDataEngine()
+
+    const queryFn: QueryFunction<TResultData, TQueryKey> = async () => {
+        const response = await dataEngine.query({ apiDataQuery: query })
+        return response.apiDataQuery as TResultData
+    }
+
+    return useQuery<TResultData, TError, TData, TQueryKey>({
+        queryKey,
+        queryFn,
+        ...options,
+    })
+}
 ```
 
 Always use `useApiDataQuery` for data fetching — never use `useDataQuery` from

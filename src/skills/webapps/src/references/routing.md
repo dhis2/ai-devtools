@@ -22,16 +22,16 @@ immediately — e.g. `#/enrollments?programId=IpHINAT79UW&orgUnitId=DiszpKrYNg8`
 Use `useSearchParams` from React Router to read and write query parameters:
 
 ```tsx
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from 'react-router-dom'
 
-const [searchParams, setSearchParams] = useSearchParams();
-const programId = searchParams.get("programId");
+const [searchParams, setSearchParams] = useSearchParams()
+const programId = searchParams.get('programId')
 
 // Update a param (merges with existing params)
 setSearchParams((prev) => {
-  prev.set("programId", selectedId);
-  return prev;
-});
+    prev.set('programId', selectedId)
+    return prev
+})
 ```
 
 This pattern makes the app feel stateless from the user's perspective — refreshing the

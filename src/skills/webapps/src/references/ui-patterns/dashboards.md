@@ -10,43 +10,43 @@ Create a CSS Module for the dashboard page (e.g. `MyDashboard.module.css`):
 
 ```css
 .container {
-  margin-block-start: var(--spacers-dp24);
-  display: flex;
-  flex-direction: row;
-  gap: 16px;
+    margin-block-start: var(--spacers-dp24);
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
 }
 
 .leftColumn {
-  flex: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+    flex: 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .rightColumn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 ```
 
 ## Usage
 
 ```tsx
-import styles from "./MyDashboard.module.css";
+import styles from './MyDashboard.module.css'
 
 export const MyDashboard = () => (
-  <div className={styles.container}>
-    <div className={styles.leftColumn}>
-      <ActionsWidget />
-      <ResultsWidget />
+    <div className={styles.container}>
+        <div className={styles.leftColumn}>
+            <ActionsWidget />
+            <ResultsWidget />
+        </div>
+        <div className={styles.rightColumn}>
+            <SummaryWidget />
+        </div>
     </div>
-    <div className={styles.rightColumn}>
-      <SummaryWidget />
-    </div>
-  </div>
-);
+)
 ```
 
 ## Key points

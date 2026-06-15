@@ -8,23 +8,23 @@ Import components directly from `@dhis2/ui`:
 
 ```tsx
 import {
-  Button,
-  Input,
-  SingleSelect,
-  SingleSelectOption,
-  Modal,
-  ModalTitle,
-  ModalContent,
-  ModalActions,
-  CircularLoader,
-  NoticeBox,
-  DataTable,
-  DataTableHead,
-  DataTableBody,
-  DataTableRow,
-  DataTableCell,
-  DataTableColumnHeader,
-} from "@dhis2/ui";
+    Button,
+    Input,
+    SingleSelect,
+    SingleSelectOption,
+    Modal,
+    ModalTitle,
+    ModalContent,
+    ModalActions,
+    CircularLoader,
+    NoticeBox,
+    DataTable,
+    DataTableHead,
+    DataTableBody,
+    DataTableRow,
+    DataTableCell,
+    DataTableColumnHeader,
+} from '@dhis2/ui'
 ```
 
 The library has more components than you'd expect — `Transfer`, `SelectorBar`,
@@ -45,16 +45,16 @@ source does.
    — e.g. `"^10.12.13"` → `10.12.13`.
 2. Fetch with opensrc (tags are `v`-prefixed). `npx opensrc path` prints the absolute path
    to the cached source, fetching on cache miss:
-   ```bash
-   UI=$(npx opensrc path dhis2/ui@v10.12.13)
-   ```
-   The source is cached globally at `~/.opensrc/repos/github.com/dhis2/ui/v10.12.13/`.
+    ```bash
+    UI=$(npx opensrc path dhis2/ui@v10.12.13)
+    ```
+    The source is cached globally at `~/.opensrc/repos/github.com/dhis2/ui/v10.12.13/`.
 3. Component source lives in `components/` — each has its own package with `src/`
    (e.g. `components/data-table/src/`). Search there for the component you need:
-   ```bash
-   ls "$UI/components"
-   rg "DataTable" "$UI/components/data-table/src"
-   ```
+    ```bash
+    ls "$UI/components"
+    rg "DataTable" "$UI/components/data-table/src"
+    ```
 
 ## Custom styling
 
@@ -62,13 +62,13 @@ Use CSS Modules (`.module.css`) with DHIS2 CSS variables for colors, spacing, an
 
 ```css
 .container {
-  padding: var(--spacers-dp16);
-  background: var(--colors-white);
+    padding: var(--spacers-dp16);
+    background: var(--colors-white);
 }
 
 .header {
-  margin-block-end: var(--spacers-dp12);
-  color: var(--colors-grey900);
+    margin-block-end: var(--spacers-dp12);
+    color: var(--colors-grey900);
 }
 ```
 
