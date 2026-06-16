@@ -140,12 +140,13 @@ html {
     background: var(--sidenav-dark-bg);
     color: var(--colors-grey300);
     font-size: 16px;
-    text-align: left;
+    text-align: start;
     display: flex;
     align-items: center;
     width: 100%;
     min-height: 32px;
-    padding: 8px 8px 8px 12px;
+    padding-block: 8px;
+    padding-inline: 12px 8px;
     cursor: pointer;
 }
 
@@ -166,7 +167,7 @@ html {
 }
 
 .sidenavParentChevron {
-    margin-left: auto;
+    margin-inline-start: auto;
     width: 16px;
     height: 16px;
     transition: transform 0.1s linear;
@@ -182,7 +183,8 @@ html {
     display: flex;
     align-items: center;
     min-height: 32px;
-    padding: 8px 8px 8px 12px;
+    padding-block: 8px;
+    padding-inline: 12px 8px;
     background: var(--sidenav-dark-bg);
     text-decoration: none;
     color: var(--colors-grey300);
@@ -221,19 +223,19 @@ html {
 .sidenavLink :global(.active) {
     color: var(--colors-grey300);
     background: var(--sidenav-dark-bg-selected);
-    box-shadow: inset 6px 0px 0px 0px var(--colors-teal400);
+    border-inline-start: 6px solid var(--colors-teal400);
 }
 
 /* Indent links inside a parent */
 .sidenavParent .sidenavLink a {
-    padding-left: var(--spacers-dp32);
+    padding-inline-start: var(--spacers-dp32);
 }
 
 /* Footer */
 
 .sidenavFooter {
-    margin-top: auto;
-    padding-bottom: 52px;
+    margin-block-start: auto;
+    padding-block-end: 52px;
 }
 ```
 
