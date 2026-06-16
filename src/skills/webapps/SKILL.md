@@ -89,6 +89,7 @@ These apply to all DHIS2 work, regardless of which references you read:
 
 - **React 18 only.** No Suspense for data fetching, no React 19 APIs (`use()`, `useFormStatus`, etc.). Handle loading states explicitly with `isLoading` and `CircularLoader`.
 - **Always use `@dhis2/ui`** for UI components. Not MUI, Chakra, Ant Design. Only use custom components if the ui library doesn't provide the component you need.
+- **Accessibility is not optional.** `@dhis2/ui` handles ARIA roles, focus trapping, and keyboard support automatically — don't override these. Always add `aria-label` to icon-only buttons, use sequential heading levels, provide `alt` text on images, and never use color as the only signal for state. See `references/ui-patterns.md` § Accessibility.
 - **Always read source code before writing code.** For DHIS2 frontend libraries (`@dhis2/ui`, `@dhis2/app-runtime`), read `node_modules/@dhis2/<package>/` directly — they ship with source. For the DHIS2 backend API, use `opensrc` (see `references/data-fetching.md`). Training data is not reliable for either.
 - **Use `i18n.t()` from `@dhis2/d2-i18n`** for all user-facing strings. For strings with
   runtime values, use named interpolation: `i18n.t('Error: {{message}}', { message })`.

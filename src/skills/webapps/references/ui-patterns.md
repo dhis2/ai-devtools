@@ -34,6 +34,69 @@ The library has more components than you'd expect — `Transfer`, `SelectorBar`,
 To see every available component, read `node_modules/@dhis2/ui/build/es/index.js` — it
 re-exports everything the library provides.
 
+## Accessibility
+
+`@dhis2/ui` has invested heavily in accessibility — components handle ARIA roles, keyboard
+navigation, focus trapping, and screen reader announcements out of the box. This only works
+if you use the library correctly and don't undermine it with custom overrides. **Accessibility
+is not optional — consider it at every UI decision.**
+
+### What `@dhis2/ui` gives you automatically
+
+- **Form fields** (`InputField`, `SingleSelectField`, etc.) associate labels with inputs via
+  `htmlFor`/`id` — never use raw `<input>` without a label.
+- **Modal** traps focus inside the dialog and restores it on close — don't override this with
+  `tabIndex` hacks.
+- **Button** has correct `role`, keyboard activation, and disabled state semantics.
+- **DataTable** renders as a real `<table>` with proper `<th>` / `scope` attributes.
+- **NoticeBox** / alerts use appropriate `role="alert"` or `role="status"` semantics.
+
+### What you must still do
+
+**Icon-only buttons** — always provide an accessible label:
+
+```tsx
+import { Button, IconDelete24 } from '@dhis2/ui'
+
+// Wrong — screen reader announces nothing meaningful
+<Button icon={<IconDelete24 />} onClick={onDelete} />
+
+// Correct — use aria-label or a visually-hidden label
+<Button icon={<IconDelete24 />} onClick={onDelete} aria-label={i18n.t('Delete route')} />
+```
+
+**Heading hierarchy** — don't skip levels. A page with an `<h1>` should use `<h2>` for
+subsections, then `<h3>` — never jump from `<h1>` to `<h3>`. Screen readers use headings
+to navigate the page.
+
+**Images** — always provide `alt` text. Decorative images get an empty string so screen
+readers skip them:
+
+```tsx
+<img src={logo} alt="" />                          // decorative
+<img src={chart} alt={i18n.t('Monthly trend chart')} />  // meaningful
+```
+
+**Don't rely on color alone** to convey state or meaning. Pair color with text, icons, or
+labels — for example, an error state should show both a red border _and_ validation text,
+not just a color change.
+
+**Keyboard navigation** — every interactive element must be reachable via `Tab` and
+operable via `Enter`/`Space`. Avoid `onClick` on non-interactive elements (`<div>`,
+`<span>`). Use `<button>` or `@dhis2/ui` `Button` instead.
+
+**Dynamic content** — when content updates without a page load (search results, async
+form feedback), ensure the update is announced. `useAlert` from `@dhis2/app-runtime`
+handles this for toast messages — use it rather than custom status text.
+
+### Checklist before shipping a UI feature
+
+- [ ] All form fields have visible labels (not just placeholders)
+- [ ] Icon-only buttons have `aria-label`
+- [ ] Heading levels are sequential, not skipped
+- [ ] Keyboard-navigable: all actions reachable without a mouse
+- [ ] Error/success states use text, not just color
+
 ## Fetch and read the UI library source
 
 Before implementing any UI, fetch the `@dhis2/ui` source with [`opensrc`](https://opensrc.sh)
