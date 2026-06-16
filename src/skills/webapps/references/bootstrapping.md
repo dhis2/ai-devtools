@@ -288,6 +288,104 @@ export const useApiDataQuery = <
 Always use `useApiDataQuery` for data fetching — never use `useDataQuery` from
 `@dhis2/app-runtime` directly.
 
+## After bootstrapping: code quality tooling
+
+Before writing any app code, ask the user:
+
+> "Do you want to use the DHIS2 shared ESLint and Prettier configs (`@dhis2/config-eslint`,
+> `@dhis2/config-prettier`) for consistency with the wider DHIS2 ecosystem, or do you have
+> your own ESLint/Prettier setup?"
+
+If they choose DHIS2 shared configs (recommended), set everything up. If they have their own,
+skip to the husky + lint-staged step and wire it to their existing lint script.
+
+### DHIS2 shared configs
+
+**Install packages:**
+
+```bash
+pnpm add -D eslint @eslint/compat prettier husky lint-staged @dhis2/config-eslint @dhis2/config-prettier
+```
+
+**Create `eslint.config.mjs`** — use the `/react` export for React apps:
+
+```js
+import config from '@dhis2/config-eslint/react'
+import { defineConfig } from 'eslint/config'
+import { includeIgnoreFile } from '@eslint/compat'
+import { fileURLToPath } from 'node:url'
+
+const gitignorePath = fileURLToPath(new URL('.gitignore', import.meta.url))
+
+export default defineConfig([
+    includeIgnoreFile(gitignorePath, 'Imported .gitignore patterns'),
+    {
+        extends: [config],
+    },
+])
+```
+
+**Create `.prettierrc.mjs`:**
+
+```js
+import prettierConfig from '@dhis2/config-prettier'
+
+/** @type {import("prettier").Config} */
+const config = {
+    ...prettierConfig,
+}
+
+export default config
+```
+
+### Husky + lint-staged
+
+Initialize husky and add the pre-commit hook:
+
+```bash
+npx husky init
+echo "pnpm lint-staged" > .husky/pre-commit
+```
+
+Add to `package.json`:
+
+```json
+{
+    "scripts": {
+        "prepare": "husky",
+        "lint": "eslint && prettier -c .",
+        "format": "prettier . -w"
+    },
+    "lint-staged": {
+        "*": ["pnpm prettier . --write", "pnpm lint"]
+    }
+}
+```
+
+### CI lint step
+
+Offer to add a lint job to GitHub Actions. If they already have a CI workflow, add
+`pnpm lint` as a step there. Otherwise create `.github/workflows/lint.yml`:
+
+```yaml
+name: Lint
+
+on: [push, pull_request]
+
+jobs:
+    lint:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: pnpm/action-setup@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: pnpm
+            - run: pnpm install
+            - run: pnpm lint
+```
+
 ## After bootstrapping: set up sidebar navigation
 
 Once the above steps are complete, read `references/routing.md` →
