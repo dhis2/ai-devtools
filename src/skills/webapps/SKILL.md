@@ -51,6 +51,7 @@ the API shape before building the UI.
 | Handle API differences across DHIS2 versions                               | `references/data-fetching.md` (§ Feature flags)                                                             |
 | Type API responses with DHIS2 types                                        | `references/types.md`                                                                                       |
 | Write tests for hooks or components                                        | `references/testing.md`                                                                                     |
+| Check user authorities or gate UI by permission                            | `references/access-control.md`                                                                              |
 
 ## How to work in this codebase
 
@@ -87,9 +88,14 @@ These apply to all DHIS2 work, regardless of which references you read:
 - **React 18 only.** No Suspense for data fetching, no React 19 APIs (`use()`, `useFormStatus`, etc.). Handle loading states explicitly with `isLoading` and `CircularLoader`.
 - **Always use `@dhis2/ui`** for UI components. Not MUI, Chakra, Ant Design. Only use custom components if the ui library doesn't provide the component you need.
 - **Always read source code before writing code.** For DHIS2 frontend libraries (`@dhis2/ui`, `@dhis2/app-runtime`), read `node_modules/@dhis2/<package>/` directly — they ship with source. For the DHIS2 backend API, use `opensrc` (see `references/data-fetching.md`). Training data is not reliable for either.
-- **Use `i18n.t()` from `@dhis2/d2-i18n`** for all user-facing strings.
+- **Use `i18n.t()` from `@dhis2/d2-i18n`** for all user-facing strings. For strings with
+  runtime values, use named interpolation: `i18n.t('Error: {{message}}', { message })`.
+  If the interpolated value contains a colon, set `nsSeparator: '-:-'` to prevent `d2-i18n`
+  from treating it as a namespace separator:
+  `i18n.t('Type: {{type}}', { type, nsSeparator: '-:-' })`.
 - **Use displayName instead of name** for all dhis2 resources (organisation units, data elements, etc.).
-- **CSS Modules + DHIS2 design tokens** for styling (`var(--spacers-dp16)`, `var(--colors-grey900)`, etc.).
+- **CSS Modules + DHIS2 design tokens** for spacing, color, and elevation — see `references/ui-patterns.md` § Design tokens. Never use hard-coded pixel values or hex colors.
+- **UI copy conventions:** use "Add" for adding an existing item to a collection, "Create" for making a new object; "Delete" for permanent removal, "Remove" for detaching; "Edit" not "Change" or "Modify". No ampersands (`and` not `&`), no abbreviations in labels.
 - **Verify after each turn.** Run `pnpm exec eslint` and `pnpm exec tsc --noEmit` after making changes to catch errors early. Fix any issues before moving on. No output means no errors.
 
 ## Troubleshooting

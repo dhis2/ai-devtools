@@ -135,6 +135,74 @@ const DataElementForm = ({ onSubmit, isPending }: DataElementFormProps) => {
 }
 ```
 
+## MultiSelect
+
+Use `MultiSelectField` + `MultiSelectOption` for fields where the user picks multiple
+values. Wire it to React Hook Form the same way as `SingleSelectField` — the value is a
+`string[]`:
+
+```tsx
+import { MultiSelectField, MultiSelectOption } from '@dhis2/ui'
+
+;<Controller
+    name="authorities"
+    control={control}
+    render={({ field, fieldState }) => (
+        <MultiSelectField
+            label={i18n.t('Authorities')}
+            selected={field.value ?? []}
+            onChange={({ selected }) => field.onChange(selected)}
+            error={Boolean(fieldState.error)}
+            validationText={fieldState.error?.message}
+            filterable
+            clearable
+        >
+            {authorities.map((a) => (
+                <MultiSelectOption
+                    key={a.id}
+                    label={a.displayName}
+                    value={a.id}
+                />
+            ))}
+        </MultiSelectField>
+    )}
+/>
+```
+
+`filterable` adds a search box inside the dropdown. `clearable` adds an × to reset the
+selection. Both are recommended for lists longer than ~5 items.
+
+## Field wrapper for custom inputs
+
+When a component from `@dhis2/ui` doesn't come with a built-in label and validation
+display, wrap it in `Field` to get consistent label, help text, and error styling:
+
+```tsx
+import { Field, Switch } from '@dhis2/ui'
+
+;<Controller
+    name="disabled"
+    control={control}
+    render={({ field, fieldState }) => (
+        <Field
+            label={i18n.t('Disabled')}
+            helpText={i18n.t('Disabled routes will not receive any traffic.')}
+            error={Boolean(fieldState.error)}
+            validationText={fieldState.error?.message}
+        >
+            <Switch
+                label={i18n.t('Disable this route')}
+                checked={field.value}
+                onChange={({ checked }) => field.onChange(checked)}
+            />
+        </Field>
+    )}
+/>
+```
+
+`Field` is also useful for wrapping custom inputs, date pickers, or any component that
+manages its own internal state but needs standard form field chrome.
+
 ## Help text and placeholders
 
 `InputField` accepts `helpText` for instructional copy beneath the field and `placeholder`

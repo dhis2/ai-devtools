@@ -72,6 +72,45 @@ Use CSS Modules (`.module.css`) with DHIS2 CSS variables for colors, spacing, an
 }
 ```
 
+## Design tokens
+
+Use CSS custom properties from the DHIS2 design system for all spacing, color, and
+elevation. Never use hard-coded pixel values or hex colors.
+
+### Spacers (8-point scale)
+
+```css
+var(--spacers-dp4)   /* 4px  — tight inline gaps */
+var(--spacers-dp8)   /* 8px  — default inline spacing */
+var(--spacers-dp12)  /* 12px */
+var(--spacers-dp16)  /* 16px — default block padding */
+var(--spacers-dp24)  /* 24px — section padding */
+var(--spacers-dp32)  /* 32px — large section gaps */
+var(--spacers-dp48)  /* 48px */
+var(--spacers-dp64)  /* 64px — page-level spacing */
+```
+
+### Color semantics
+
+| Token prefix       | Semantic meaning          | Example use                      |
+| ------------------ | ------------------------- | -------------------------------- |
+| `--colors-red*`    | Error, destructive action | Delete button, error NoticeBox   |
+| `--colors-yellow*` | Warning                   | Warning NoticeBox, caution badge |
+| `--colors-green*`  | Success, positive         | Success alert, active indicator  |
+| `--colors-teal*`   | Active, selected state    | Selected nav item, active tab    |
+| `--colors-blue*`   | Primary action            | Primary button                   |
+| `--colors-grey*`   | Neutral text and surfaces | Body text, card backgrounds      |
+
+### Z-index layers
+
+Use these named values — never invent z-index numbers:
+
+```css
+var(--z-index-application-top)  /* 2000 — sticky headers, floating panels */
+var(--z-index-blocking)         /* 3000 — modal backdrops */
+var(--z-index-alert)            /* 9999 — toast alerts */
+```
+
 ## Forms
 
 Use **React Hook Form** for form state management, **Zod** for schema validation, and
@@ -101,3 +140,63 @@ collapsible and non-collapsible variants. For the full implementation, read
 Arrange Widgets in a two-column flex layout with a 3:1 ratio (left column for main
 content, right column for summaries). For the layout CSS and usage, read
 `references/ui-patterns/dashboards.md`.
+
+## Error display
+
+Use `NoticeBox` as the standard component for displaying errors and warnings in the UI —
+not a custom `<div>` or `<p>`. It renders a styled notice with a title and body:
+
+```tsx
+import { NoticeBox } from '@dhis2/ui'
+
+if (error) {
+    return (
+        <NoticeBox error title={i18n.t('Failed to load routes')}>
+            {error.message}
+        </NoticeBox>
+    )
+}
+```
+
+Props: `error` (red), `warning` (yellow), `title` (bold heading). Use `error` for
+failures, `warning` for non-blocking issues.
+
+## Switch / toggle
+
+Use `Switch` from `@dhis2/ui` for boolean toggles — not a checkbox or custom component:
+
+```tsx
+import { Switch } from '@dhis2/ui'
+
+;<Switch
+    label={i18n.t('Enable route')}
+    checked={route.enabled}
+    onChange={({ checked }) => onToggle(checked)}
+    disabled={isUpdating}
+/>
+```
+
+For enable/disable actions in a table row, wire `onChange` to a JSON Patch mutation (see
+`references/data-fetching.md` § JSON Patch mutations).
+
+## Sharing
+
+Use `SharingDialog` from `@dhis2/ui` for object-level sharing — do not build a custom
+sharing modal. It handles user/group search, access level selection, and public access:
+
+```tsx
+import { SharingDialog } from '@dhis2/ui'
+
+{
+    sharingDialogOpen && (
+        <SharingDialog
+            id={route.id}
+            type="route"
+            onClose={() => setSharingDialogOpen(false)}
+        />
+    )
+}
+```
+
+`type` is the DHIS2 object type string (e.g. `'dataElement'`, `'program'`, `'route'`).
+The dialog fetches and updates sharing settings itself — no extra data-fetching needed.
