@@ -100,6 +100,13 @@ These apply to all DHIS2 work, regardless of which references you read:
 - **CSS Modules + DHIS2 design tokens** for spacing, color, and elevation — see `references/ui-patterns.md` § Design tokens. Never use hard-coded pixel values or hex colors.
 - **Use logical CSS properties** for all spacing and positioning — `margin-inline-start` not `margin-left`, `padding-block` not `padding-top/bottom`, `inset-inline-end` not `right`, `border-inline-start` not `border-left`, `text-align: start/end` not `left/right`. This ensures correct layout in RTL languages.
 - **UI copy conventions:** use "Add" for adding an existing item to a collection, "Create" for making a new object; "Delete" for permanent removal, "Remove" for detaching; "Edit" not "Change" or "Modify". No ampersands (`and` not `&`), no abbreviations in labels.
+- **State management:** Most state in a DHIS2 app is covered by TanStack Query (server
+  state), React Router (URL/navigation state), and `useState`/`useReducer` (local UI state).
+  Do not introduce a global state library unless these genuinely can't cover the use case.
+  For existing apps, check `package.json` first — if a library (Redux, MobX, etc.) is
+  already in use, work with it. If no state management library is present and one is truly
+  needed, add **Zustand** — it requires no boilerplate and integrates well with TanStack
+  Query.
 - **Never store third-party credentials client-side.** Use DHIS2 Routes for external service
   communication. Use `UserDataStore` over `DataStore` for sensitive config; add `?encrypt=true`
   for sensitive values. See `references/security.md`.
