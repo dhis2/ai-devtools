@@ -8,11 +8,11 @@ For guidance on using AI agents to build DHIS2 applications, see the [AI-assiste
 
 Packages live under `src/<namespace>/<name>` and are published to npm under the `@dhis2` scope.
 
-| Package                                        | Description                                  |
-| ---------------------------------------------- | -------------------------------------------- |
-| [`@dhis2/skill-webapps`](./src/skills/webapps) | AI skill for building DHIS2 web applications |
+| Package                                              | Description                                  |
+| ---------------------------------------------------- | -------------------------------------------- |
+| [`@dhis2/skill-dhis2-apps`](./src/skills/dhis2-apps) | AI skill for building DHIS2 web applications |
 
-> **Attribution** — `@dhis2/skill-webapps` is based on [dhis2-app-skills](https://github.com/devotta-labs/dhis2-app-skills) by [Eirik Haugstulen](https://github.com/eirikur-haugstulen) at [Devotta Labs](https://github.com/devotta-labs).
+> **Attribution** — `@dhis2/skill-dhis2-apps` is based on [dhis2-app-skills](https://github.com/devotta-labs/dhis2-app-skills) by [Eirik Haugstulen](https://github.com/eirikur-haugstulen) at [Devotta Labs](https://github.com/devotta-labs).
 
 ## Install skills
 
@@ -21,10 +21,10 @@ Packages live under `src/<namespace>/<name>` and are published to npm under the 
 npx skills add dhis2/ai-devtools
 
 # A specific skill by name
-npx skills add dhis2/ai-devtools --skill webapps
+npx skills add dhis2/ai-devtools --skill dhis2-apps
 
 # A specific skill by path
-npx skills add https://github.com/dhis2/ai-devtools/tree/main/src/skills/webapps
+npx skills add https://github.com/dhis2/ai-devtools/tree/main/src/skills/dhis2-apps
 ```
 
 ## Contributing

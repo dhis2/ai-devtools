@@ -33,9 +33,9 @@ importers:
         specifier: ^3.5.0
         version: 3.8.4
 
-  src/skills/example-skill: {}
+  src/skills/dhis2-apps: {}
 
-  src/skills/webapps: {}
+  src/skills/example-skill: {}
 
 packages:
 

@@ -1,5 +1,5 @@
 {
-    "name": "@dhis2/skill-webapps",
+    "name": "@dhis2/skill-dhis2-apps",
     "version": "0.0.1",
     "description": "AI skill for building DHIS2 web applications",
     "license": "BSD-3-Clause",
