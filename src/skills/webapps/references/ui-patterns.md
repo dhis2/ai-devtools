@@ -121,7 +121,21 @@ source does.
 
 ## Custom styling
 
-Use CSS Modules (`.module.css`) with DHIS2 CSS variables for colors, spacing, and elevation:
+Use CSS Modules (`.module.css`) with DHIS2 CSS variables for colors, spacing, and elevation.
+**Always use logical CSS properties** — not physical ones — so layout works correctly in
+RTL languages (Arabic, Hebrew, etc.):
+
+| Instead of               | Use                       |
+| ------------------------ | ------------------------- |
+| `margin-left`            | `margin-inline-start`     |
+| `margin-right`           | `margin-inline-end`       |
+| `padding-top`            | `padding-block-start`     |
+| `padding-bottom`         | `padding-block-end`       |
+| `padding-left/right`     | `padding-inline`          |
+| `left` / `right`         | `inset-inline-start/end`  |
+| `border-left`            | `border-inline-start`     |
+| `text-align: left/right` | `text-align: start/end`   |
+| `float: left/right`      | `float: inline-start/end` |
 
 ```css
 .container {
@@ -132,6 +146,11 @@ Use CSS Modules (`.module.css`) with DHIS2 CSS variables for colors, spacing, an
 .header {
     margin-block-end: var(--spacers-dp12);
     color: var(--colors-grey900);
+}
+
+.sidebarItem {
+    padding-inline-start: var(--spacers-dp8); /* not padding-left */
+    border-inline-start: 2px solid var(--colors-teal400); /* not border-left */
 }
 ```
 
