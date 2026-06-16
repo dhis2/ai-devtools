@@ -113,12 +113,12 @@ var(--z-index-alert)            /* 9999 — toast alerts */
 
 ## Forms
 
-Use **React Hook Form** for form state management, **Zod** for schema validation, and
-wire `@dhis2/ui` inputs via `Controller` (they use `onChange({ value })` not `onChange(event)`,
-so they need the Controller wrapper rather than `register`). `SingleSelectField` uses
-`selected` / `onChange({ selected })` instead.
+Check `package.json` before writing any form code. Most existing DHIS2 apps use
+`react-final-form` + `@dhis2/ui-forms` (`InputFieldFF`, `SingleSelectFieldFF`, etc. as
+direct `Field` components with built-in validators). New apps use React Hook Form + Zod
+with `Controller`. Do not mix both in the same app.
 
-For the full example and detailed key points, read `references/ui-patterns/forms.md`.
+For the full patterns for both approaches, read `references/ui-patterns/forms.md`.
 
 ## Tables
 
@@ -167,7 +167,6 @@ Use `Switch` from `@dhis2/ui` for boolean toggles — not a checkbox or custom c
 
 ```tsx
 import { Switch } from '@dhis2/ui'
-
 ;<Switch
     label={i18n.t('Enable route')}
     checked={route.enabled}
