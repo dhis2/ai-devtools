@@ -1,5 +1,5 @@
 ---
-name: webapps
+name: dhis2-apps
 description: >
     Guide for building DHIS2 custom applications using the DHIS2 App Platform.
     Use this skill whenever the user wants to create, scaffold, or bootstrap a DHIS2 app,
@@ -65,13 +65,19 @@ Before writing code, always read `CLAUDE.md` (or equivalent agent file) in the p
 
 **Library versions:**
 
-Always use the latest stable versions of the core libraries unless the user specifies otherwise. LLM training data tends to lag — check `package.json` for the installed version, then fetch the source at that version with opensrc before writing code.
+`@dhis2/ui`, `@dhis2/app-runtime`, and the app platform libraries ship with their source
+code. **Read `node_modules/@dhis2/<package>/` directly** — it is the most accurate source
+of truth for component props, hook signatures, and exports. Do not rely on training data
+or opensrc for these packages.
 
-| Library                  | Notes                                                             |
-| ------------------------ | ----------------------------------------------------------------- |
-| `@dhis2/ui`              | Check installed version in `package.json` before fetching source  |
-| `@dhis2/app-runtime`     | Provides `useDataEngine`, `useConfig`, `useAlert`, `useDataQuery` |
-| `@dhis2/cli-app-scripts` | The build tool — scaffold command uses the latest by default      |
+| Library                  | Source location                                                      |
+| ------------------------ | -------------------------------------------------------------------- |
+| `@dhis2/ui`              | `node_modules/@dhis2/ui/` — component props, exports, design tokens  |
+| `@dhis2/app-runtime`     | `node_modules/@dhis2/app-runtime/` — hook signatures and context API |
+| `@dhis2/cli-app-scripts` | The build tool — scaffold command uses the latest by default         |
+
+`opensrc` is for the **DHIS2 backend** (`dhis2/dhis2-core`) only — use it to read
+controller definitions and API contracts when building data-fetching code.
 
 ## Rules
 
@@ -79,7 +85,7 @@ These apply to all DHIS2 work, regardless of which references you read:
 
 - **React 18 only.** No Suspense for data fetching, no React 19 APIs (`use()`, `useFormStatus`, etc.). Handle loading states explicitly with `isLoading` and `CircularLoader`.
 - **Always use `@dhis2/ui`** for UI components. Not MUI, Chakra, Ant Design. Only use custom components if the ui library doesn't provide the component you need.
-- **Always clone and read source code** before writing data-fetching or UI code. Your training data is unreliable for DHIS2 APIs and component props — the source is the contract.
+- **Always read source code before writing code.** For DHIS2 frontend libraries (`@dhis2/ui`, `@dhis2/app-runtime`), read `node_modules/@dhis2/<package>/` directly — they ship with source. For the DHIS2 backend API, use `opensrc` (see `references/data-fetching.md`). Training data is not reliable for either.
 - **Use `i18n.t()` from `@dhis2/d2-i18n`** for all user-facing strings.
 - **Use displayName instead of name** for all dhis2 resources (organisation units, data elements, etc.).
 - **CSS Modules + DHIS2 design tokens** for styling (`var(--spacers-dp16)`, `var(--colors-grey900)`, etc.).

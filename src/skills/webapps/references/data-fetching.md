@@ -1,49 +1,45 @@
 # Fetching Data from DHIS2
 
 DHIS2's API changes between major versions — endpoint paths, request/response shapes, and
-query parameters all evolve. Do not rely on memorized API structures. Instead, read the
-source code of the version the user is targeting.
+query parameters all evolve. Do not rely on memorized API structures.
 
-**Every data-fetching task starts by fetching the source and reading the relevant controller.**
-This is not optional and not something you skip for "simple" endpoints. Even well-known
-resources like `organisationUnits` or `trackedEntities` have had their APIs change between
-versions. Fetch first, then write code.
+**Every data-fetching task starts by reading the API contract for the endpoint you're
+building.** This is not optional. Even well-known resources like `organisationUnits` or
+`trackedEntities` have changed between versions. Read first, then write code.
 
 ---
 
-## Step 1: Fetch the DHIS2 source
+## Step 1: Read the API contract
 
-This is the first thing you do for any data-fetching work — before writing a single line of
-hook or component code. Fetch the DHIS2 backend so you can read the actual API contracts —
-controller definitions, request/response DTOs, query parameter handling, and validation rules.
-Your training data is not reliable for DHIS2 APIs because they change between versions. The
-source is the only trustworthy contract.
-
-Use [`opensrc`](https://opensrc.sh) to shallow-clone packages into a global cache at
-`~/.opensrc/`. `npx opensrc path <spec>` prints the absolute path to the cached source
-(fetching on cache miss), so you compose it with other tools via `$(...)`:
+Use the OpenAPI spec shipped with `@dhis2/api-types` as the first source of truth — it's
+already in `node_modules` and covers all standard endpoints:
 
 ```bash
-npx opensrc path dhis2/dhis2-core
+# Check if the endpoint exists and see its parameters
+cat node_modules/@dhis2/api-types/specs/v43.json | jq '.paths | keys[]' | grep -i orgUnit
+cat node_modules/@dhis2/api-types/specs/v43.json | jq '.paths["/organisationUnits"].get'
+
+# Read the resource schema
+cat node_modules/@dhis2/api-types/specs/v43.json | jq '.components.schemas.OrganisationUnit'
 ```
 
-If the user specifies a DHIS2 version, target that version's tag with `@<version>`:
+Use the versioned spec if the project targets a specific DHIS2 version (e.g. `specs/v42.json`).
 
-```bash
-npx opensrc path dhis2/dhis2-core@<version>
-```
-
-Only target a specific version if the user requests it.
-
-The source is cached at `~/.opensrc/repos/github.com/dhis2/dhis2-core/<version>/`. Store the
-path in a variable so you can reuse it:
+If the endpoint is **not in the spec** (some tracker endpoints, custom extensions) or the
+spec shape looks incomplete, fall back to the DHIS2 backend source with `opensrc`:
 
 ```bash
 CORE=$(npx opensrc path dhis2/dhis2-core)
 rg "OrganisationUnitController" "$CORE"
 ```
 
-## Step 2: Read the API contracts from the cached source
+If the user specifies a DHIS2 version, target that tag:
+
+```bash
+CORE=$(npx opensrc path dhis2/dhis2-core@2.42)
+```
+
+## Step 2: Read the API contracts from the source
 
 Once the source is cached, read the relevant controller and DTOs for the endpoint you're
 building. You need to extract:
