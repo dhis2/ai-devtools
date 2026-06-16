@@ -52,6 +52,8 @@ the API shape before building the UI.
 | Type API responses with DHIS2 types                                        | `references/types.md`                                                                                       |
 | Write tests for hooks or components                                        | `references/testing.md`                                                                                     |
 | Check user authorities or gate UI by permission                            | `references/access-control.md`                                                                              |
+| Store app config or user settings in DataStore                             | `references/security.md`                                                                                    |
+| Call an external service or integrate a third-party API                    | `references/security.md`                                                                                    |
 
 ## How to work in this codebase
 
@@ -96,6 +98,9 @@ These apply to all DHIS2 work, regardless of which references you read:
 - **Use displayName instead of name** for all dhis2 resources (organisation units, data elements, etc.).
 - **CSS Modules + DHIS2 design tokens** for spacing, color, and elevation — see `references/ui-patterns.md` § Design tokens. Never use hard-coded pixel values or hex colors.
 - **UI copy conventions:** use "Add" for adding an existing item to a collection, "Create" for making a new object; "Delete" for permanent removal, "Remove" for detaching; "Edit" not "Change" or "Modify". No ampersands (`and` not `&`), no abbreviations in labels.
+- **Never store third-party credentials client-side.** Use DHIS2 Routes for external service
+  communication. Use `UserDataStore` over `DataStore` for sensitive config; add `?encrypt=true`
+  for sensitive values. See `references/security.md`.
 - **Verify after each turn.** Run `pnpm exec eslint` and `pnpm exec tsc --noEmit` after making changes to catch errors early. Fix any issues before moving on. No output means no errors.
 
 ## Troubleshooting
