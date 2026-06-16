@@ -1,0 +1,14 @@
+{
+    "version": "0.0.1",
+    "organization": "DHIS2",
+    "date": "June 2026",
+    "abstract": "Builds production-quality custom DHIS2 web applications. Scaffolds new apps with the DHIS2 App Platform (TypeScript, TanStack Query v4, React Router, hash routing), fetches data via the DHIS2 Web API with correct field selection and pagination, renders UI exclusively with @dhis2/ui components following the DHIS2 design system, and handles auth, access control, i18n, testing, and App Hub security compliance. Reads @dhis2/api-types OpenAPI specs and platform library source from node_modules before writing any code — never guesses at API shapes or component props.",
+    "references": [
+        "https://developers.dhis2.org/docs/guides/dhis2-and-web-apps",
+        "https://developers.dhis2.org/docs/guides/apphub-guidelines",
+        "https://developers.dhis2.org/design-system",
+        "https://github.com/dhis2/api-types",
+        "https://github.com/dhis2/app-runtime",
+        "https://github.com/dhis2/ui"
+    ]
+}
