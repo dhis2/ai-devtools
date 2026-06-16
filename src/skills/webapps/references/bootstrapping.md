@@ -43,10 +43,17 @@ Always use `--typescript`. The `--yes` flag accepts defaults (pnpm, basic templa
 ## Step 2: Update DHIS2 platform libraries
 
 The scaffold pins specific versions. Update the DHIS2 platform libraries to their latest
-before doing anything else:
+and install the API types package before doing anything else:
 
 ```bash
 pnpm update --latest @dhis2/app-runtime @dhis2/ui @dhis2/cli-app-scripts
+pnpm add --save-dev @dhis2/api-types
+```
+
+If `@dhis2/api-types` is already in `package.json`, update it instead:
+
+```bash
+pnpm update --latest @dhis2/api-types
 ```
 
 ## Step 3: Install the stack

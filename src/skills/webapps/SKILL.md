@@ -76,8 +76,9 @@ or opensrc for these packages.
 | `@dhis2/app-runtime`     | `node_modules/@dhis2/app-runtime/` — hook signatures and context API |
 | `@dhis2/cli-app-scripts` | The build tool — scaffold command uses the latest by default         |
 
-`opensrc` is for the **DHIS2 backend** (`dhis2/dhis2-core`) only — use it to read
-controller definitions and API contracts when building data-fetching code.
+`opensrc` is a **last resort** for the DHIS2 backend (`dhis2/dhis2-core`) — use it only
+when the `@dhis2/api-types` OpenAPI spec doesn't cover what you need or something looks
+wrong. Start with the spec; reach for the Java source only when the spec isn't enough.
 
 ## Rules
 
