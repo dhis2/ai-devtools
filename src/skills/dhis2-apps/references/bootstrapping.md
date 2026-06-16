@@ -386,6 +386,15 @@ jobs:
             - run: pnpm lint
 ```
 
+## After bootstrapping: does the app need a setup step?
+
+Ask the user whether the app requires admin configuration before it can be used — for example,
+selecting a program, an org unit level, or other instance-specific metadata. If it does, read
+`references/app-configuration.md` and implement the setup screen as part of bootstrapping.
+
+Apps that work on any DHIS2 instance **must not hardcode** program IDs, org unit IDs, or
+other instance-specific values. They should always be admin-configurable.
+
 ## After bootstrapping: set up sidebar navigation
 
 Once the above steps are complete, read `references/routing.md` →
