@@ -467,7 +467,7 @@ Center the loader so it's visible regardless of page layout:
 The goal is simple: never show a blank screen. Either the user sees their data, a spinner,
 or a meaningful error message.
 
-## Best practices
+## Mandatory rules
 
 1. **Always fetch the source and read it before writing code.** Before writing any hook
    or mutation, run `npx opensrc path dhis2/dhis2-core` (or with a version tag like

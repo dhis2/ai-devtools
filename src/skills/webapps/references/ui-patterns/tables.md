@@ -566,7 +566,7 @@ DataElementTable/
 │   └── DeleteDataElementModal.tsx
 ```
 
-## Key points
+## Architecture and pagination rules
 
 - **Container / table split** — the container owns URL state, fetches data, and handles loading/error. The table component is purely presentational and receives everything via props. This keeps the table reusable and testable.
 - **URL-based pagination** — `page` and `pageSize` live in the URL as search params. The `useTablePaginationParams` hook is a reusable utility shared across all tables in the app. Default values are omitted from the URL to keep it clean.

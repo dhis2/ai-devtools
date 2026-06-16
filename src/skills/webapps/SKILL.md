@@ -48,7 +48,7 @@ the API shape before building the UI.
 | Add navigation, page layout, or sidebar                                    | `references/routing.md` → `references/ui-patterns/sidebar.md`                                               |
 | Build a dashboard or detail page with widgets                              | `references/data-fetching.md` → `references/ui-patterns/widget.md` → `references/ui-patterns/dashboards.md` |
 | Creating user interfaces                                                   | `references/ui-patterns.md`                                                                                 |
-| Handle API differences across DHIS2 versions                               | `references/data-fetching.md` (§ Feature flags)                                                             |
+| Handle API differences across DHIS2 versions                               | `references/data-fetching.md` (§ Step 5: Handle version differences with feature flags)                     |
 | Type API responses with DHIS2 types                                        | `references/types.md`                                                                                       |
 | Write tests for hooks or components                                        | `references/testing.md`                                                                                     |
 | Check user authorities or gate UI by permission                            | `references/access-control.md`                                                                              |

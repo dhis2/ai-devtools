@@ -408,7 +408,7 @@ page instead — this gives full control over layout, validation feedback, and n
 blocking. The convention is to append `/new` to the current route (e.g. `/data-elements/new`)
 and navigate there on "Create new" actions. See `references/routing.md` for route setup.
 
-## Key points
+## React Hook Form + @dhis2/ui wiring rules
 
 - Spread `{...field}` then override `onChange` — `@dhis2/ui` uses `onChange({ value })`, not `onChange(event)`. `SingleSelectField` uses `selected` / `onChange({ selected })` instead.
 - Use `fieldState` from Controller render props for error display.

@@ -9,7 +9,7 @@ We strongly recommend setting up a sidebar-based layout for navigation. Most DHI
 apps grow into multi-page applications, and a sidebar gives users a consistent,
 familiar way to move between sections — matching what they see in other DHIS2 apps.
 
-Read `ui-patterns/sidebar.md` for the full implementation. It includes the sidebar
+Read `references/ui-patterns/sidebar.md` for the full implementation. It includes the sidebar
 components, the page layout grid, a content width wrapper, route handles for
 layout control (`collapseSidebar`, `fullWidth`), and the complete router wiring.
 

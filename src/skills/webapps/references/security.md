@@ -1,5 +1,14 @@
 # Security
 
+| Need                              | Pattern                                  | Section                        |
+| --------------------------------- | ---------------------------------------- | ------------------------------ |
+| Call an external API from the app | DHIS2 Routes (server-side proxy)         | § External service integration |
+| Store per-user preferences        | `userDataStore/<namespace>/key`          | § DataStore security           |
+| Store sensitive config at rest    | `dataStore/<namespace>/key?encrypt=true` | § DataStore security           |
+| Link to an external URL           | `rel="noreferrer"` on the anchor         | § XSS protection               |
+
+---
+
 ## External service integration: use DHIS2 Routes
 
 **Never store third-party API credentials (tokens, passwords, keys) in DataStore, UserDataStore,
