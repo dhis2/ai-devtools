@@ -47,7 +47,7 @@ the API shape before building the UI.
 | Build a form to create or edit a resource                                  | `references/data-fetching.md` → `references/ui-patterns.md`                                                 |
 | Add navigation, page layout, or sidebar                                    | `references/routing.md` → `references/ui-patterns/sidebar.md`                                               |
 | Build a dashboard or detail page with widgets                              | `references/data-fetching.md` → `references/ui-patterns/widget.md` → `references/ui-patterns/dashboards.md` |
-| Build or style any UI component                                            | `references/ui-patterns.md`                                                                                 |
+| Creating user interfaces                                                   | `references/ui-patterns.md`                                                                                 |
 | Handle API differences across DHIS2 versions                               | `references/data-fetching.md` (§ Feature flags)                                                             |
 | Type API responses with DHIS2 types                                        | `references/types.md`                                                                                       |
 | Write tests for hooks or components                                        | `references/testing.md`                                                                                     |
