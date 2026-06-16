@@ -72,7 +72,7 @@ flowchart TD
     AP --> SE
     AP --> AC
 
-    S --> RULES["Global rules (always active)\n─────────────────────\nReact 18 · @dhis2/ui only\nLogical CSS · Accessibility\ni18n · State management\nSecurity · Verify after each turn"]
+    S --> RULES["Global rules (always active)\n─────────────────────\nReact 18 · @dhis2/ui only\nLogical CSS · Accessibility\ni18n · State management\nNo silent failures · No hardcoded URLs\nSecurity · Verify after each turn"]
 ```
 
 ### Install
