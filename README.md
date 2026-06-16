@@ -4,17 +4,9 @@ AI development tools for the DHIS2 ecosystem — published as standalone npm pac
 
 For guidance on using AI agents to build DHIS2 applications, see the [AI-assisted App Development guide](https://developers.dhis2.org/docs/guides/ai-development) on the DHIS2 Developer Portal.
 
-## Packages
-
-Packages live under `src/<namespace>/<name>` and are published to npm under the `@dhis2` scope.
-
-| Package                                              | Description                                  |
-| ---------------------------------------------------- | -------------------------------------------- |
-| [`@dhis2/skill-dhis2-apps`](./src/skills/dhis2-apps) | AI skill for building DHIS2 web applications |
+## Install skills
 
 > **Attribution** — `@dhis2/skill-dhis2-apps` is based on [dhis2-app-skills](https://github.com/devotta-labs/dhis2-app-skills) by [Eirik Haugstulen](https://github.com/eirikur-haugstulen) at [Devotta Labs](https://github.com/devotta-labs).
-
-## Install skills
 
 ```sh
 # All skills (interactive prompt to select)

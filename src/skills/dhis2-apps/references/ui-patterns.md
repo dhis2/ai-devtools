@@ -303,7 +303,6 @@ Use `NoticeBox` for inline errors — not a custom `<div>` or `<p>`:
 
 ```tsx
 import { NoticeBox } from '@dhis2/ui'
-
 ;<NoticeBox error title={i18n.t('Failed to load routes')}>
     {error.message}
 </NoticeBox>
