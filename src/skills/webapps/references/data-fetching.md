@@ -25,6 +25,35 @@ cat node_modules/@dhis2/api-types/specs/v43.json | jq '.components.schemas.Organ
 
 Use the versioned spec if the project targets a specific DHIS2 version (e.g. `specs/v42.json`).
 
+### Cross-version compatibility check
+
+After confirming the endpoint and its parameters, **always diff the target version's spec
+against all available versions** to catch anything that changed. Do this for every endpoint
+you write a query for — not just when you suspect a difference:
+
+```bash
+# List all available spec versions
+ls node_modules/@dhis2/api-types/specs/
+
+# Compare parameters for an endpoint across all versions
+for v in node_modules/@dhis2/api-types/specs/v*.json; do
+    echo "=== $v ==="
+    jq -r '.paths["/routes"].get.parameters[]?.name // empty' "$v" 2>/dev/null | sort
+done
+
+# Or diff two specific versions directly
+diff \
+  <(jq -r '.paths["/routes"].get.parameters[]?.name // empty' node_modules/@dhis2/api-types/specs/v41.json | sort) \
+  <(jq -r '.paths["/routes"].get.parameters[]?.name // empty' node_modules/@dhis2/api-types/specs/v43.json | sort)
+
+# Check if an endpoint exists at all in an older version
+jq '.paths["/routes"]' node_modules/@dhis2/api-types/specs/v40.json
+```
+
+Report any differences to the user before writing code — missing endpoints, added or
+removed parameters, changed response shapes. Don't silently implement a workaround; let
+the user decide how to handle version gaps.
+
 If the endpoint is **not in the spec** (some tracker endpoints, custom extensions) or the
 spec shape looks incomplete, fall back to the DHIS2 backend source with `opensrc`:
 
