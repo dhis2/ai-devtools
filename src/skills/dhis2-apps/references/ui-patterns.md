@@ -223,25 +223,95 @@ Arrange Widgets in a two-column flex layout with a 3:1 ratio (left column for ma
 content, right column for summaries). For the layout CSS and usage, read
 `references/ui-patterns/dashboards.md`.
 
-## Error display
+## Error display and silent failures
 
-Use `NoticeBox` as the standard component for displaying errors and warnings in the UI —
-not a custom `<div>` or `<p>`. It renders a styled notice with a title and body:
+**No API call may fail silently.** Every network request, mutation, and async operation
+must have a visible error state — not just a loading state. If the user takes an action and
+it fails, they must be told. If data fails to load, they must see an error, not a blank
+screen or spinner that never resolves. This is one of the most common quality issues in
+DHIS2 apps.
+
+### The three states every data-dependent component must handle
 
 ```tsx
-import { NoticeBox } from '@dhis2/ui'
+const MyComponent = () => {
+    const { data, isLoading, error } = useMyData()
 
-if (error) {
+    if (isLoading) return <CircularLoader />
+
+    if (error) {
+        return (
+            <NoticeBox error title={i18n.t('Failed to load data')}>
+                {error.message || i18n.t('An unknown error occurred')}
+            </NoticeBox>
+        )
+    }
+
+    return <MyContent data={data} />
+}
+```
+
+Never render `null` or nothing for an error — the user has no way to know something went
+wrong, and no way to act on it.
+
+### Mutations must show success and failure feedback
+
+Every mutation (create, update, delete) must call `useAlert` on both success and failure.
+Do not rely solely on the UI updating — the user needs explicit confirmation:
+
+```tsx
+const { show: showSuccess } = useAlert(i18n.t('Route saved'), { success: true })
+const { show: showError } = useAlert(
+    ({ message }: { message: string }) =>
+        i18n.t('Failed to save route: {{message}}', { message }),
+    { critical: true }
+)
+
+useMutation(saveFn, {
+    onSuccess: () => showSuccess(),
+    onError: (err) => showError({ message: err.message }),
+})
+```
+
+### Missing configuration must guide the user
+
+If the app requires configuration that isn't set up yet, tell the user exactly what's
+missing and how to fix it — never show a blank screen, a cryptic error, or silently skip
+the feature:
+
+```tsx
+if (!config.programId) {
     return (
-        <NoticeBox error title={i18n.t('Failed to load routes')}>
-            {error.message}
+        <NoticeBox warning title={i18n.t('Setup required')}>
+            {i18n.t(
+                'No program is configured. Go to Settings to complete setup.'
+            )}
         </NoticeBox>
     )
 }
 ```
 
+### External dependencies must fail visibly
+
+If the app depends on an external service, a DHIS2 Route, or a backend component, and
+that dependency is unavailable, surface the error — never let the app hang or appear to
+work while silently doing nothing. Check availability at startup if possible.
+
+### Use `NoticeBox` as the standard error component
+
+Use `NoticeBox` for inline errors — not a custom `<div>` or `<p>`:
+
+```tsx
+import { NoticeBox } from '@dhis2/ui'
+
+;<NoticeBox error title={i18n.t('Failed to load routes')}>
+    {error.message}
+</NoticeBox>
+```
+
 Props: `error` (red), `warning` (yellow), `title` (bold heading). Use `error` for
-failures, `warning` for non-blocking issues.
+failures, `warning` for non-blocking issues. Use `useAlert` for transient feedback
+on mutations — `NoticeBox` for persistent inline errors where the content can't load.
 
 ## Switch / toggle
 

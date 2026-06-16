@@ -54,6 +54,8 @@ the API shape before building the UI.
 | Check user authorities or gate UI by permission                            | `references/access-control.md`                                                                              |
 | Store app config or user settings in DataStore                             | `references/security.md`                                                                                    |
 | Call an external service or integrate a third-party API                    | `references/security.md`                                                                                    |
+| Integrate AI or LLM output into a DHIS2 app                                | `references/security.md` (§ AI and LLM integrations)                                                        |
+| App requires initial setup or admin configuration                          | `references/app-configuration.md`                                                                           |
 
 ## How to work in this codebase
 
@@ -110,6 +112,14 @@ These apply to all DHIS2 work, regardless of which references you read:
 - **Never store third-party credentials client-side.** Use DHIS2 Routes for external service
   communication. Use `UserDataStore` over `DataStore` for sensitive config; add `?encrypt=true`
   for sensitive values. See `references/security.md`.
+- **No hardcoded URLs or metadata IDs.** Apps must work on any DHIS2 instance without code
+  changes. Never hardcode a DHIS2 server URL, program ID, data element ID, org unit ID, or
+  option set ID. Store admin-configurable identifiers in DataStore. See `references/security.md`
+  § No hardcoded URLs and `references/app-configuration.md`.
+- **Never fail silently.** Every async operation (query, mutation, external call) must have a
+  visible error state. Never render nothing or null on failure — show a `NoticeBox` with an
+  actionable message. Mutations must call `useAlert` on both success and failure. See
+  `references/ui-patterns.md` § Error display and silent failures.
 - **Verify after each turn.** Run `pnpm exec eslint` and `pnpm exec tsc --noEmit` after making changes to catch errors early. Fix any issues before moving on. No output means no errors.
 
 ## Troubleshooting
