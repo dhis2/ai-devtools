@@ -25,6 +25,35 @@ cat node_modules/@dhis2/api-types/specs/v43.json | jq '.components.schemas.Organ
 
 Use the versioned spec if the project targets a specific DHIS2 version (e.g. `specs/v42.json`).
 
+### Cross-version compatibility check
+
+After confirming the endpoint and its parameters, **always diff the target version's spec
+against all available versions** to catch anything that changed. Do this for every endpoint
+you write a query for — not just when you suspect a difference:
+
+```bash
+# List all available spec versions
+ls node_modules/@dhis2/api-types/specs/
+
+# Compare parameters for an endpoint across all versions
+for v in node_modules/@dhis2/api-types/specs/v*.json; do
+    echo "=== $v ==="
+    jq -r '.paths["/routes"].get.parameters[]?.name // empty' "$v" 2>/dev/null | sort
+done
+
+# Or diff two specific versions directly
+diff \
+  <(jq -r '.paths["/routes"].get.parameters[]?.name // empty' node_modules/@dhis2/api-types/specs/v41.json | sort) \
+  <(jq -r '.paths["/routes"].get.parameters[]?.name // empty' node_modules/@dhis2/api-types/specs/v43.json | sort)
+
+# Check if an endpoint exists at all in an older version
+jq '.paths["/routes"]' node_modules/@dhis2/api-types/specs/v40.json
+```
+
+Report any differences to the user before writing code — missing endpoints, added or
+removed parameters, changed response shapes. Don't silently implement a workaround; let
+the user decide how to handle version gaps.
+
 If the endpoint is **not in the spec** (some tracker endpoints, custom extensions) or the
 spec shape looks incomplete, fall back to the DHIS2 backend source with `opensrc`:
 
@@ -177,7 +206,12 @@ query: {
   Common operators: `eq`, `like`, `ilike` (case-insensitive), `in` (list), `gt`, `lt`, `ge`, `le`.
   Multiple filters are AND-ed together.
 - **`order`** — sort expression, e.g. `displayName:asc` or `created:desc`.
-- **`page`** / **`pageSize`** — pagination. Use to avoid fetching entire collections.
+- **`page`** / **`pageSize`** — pagination. **Always paginate — never fetch a full
+  collection.** Fetching all records is a performance hazard on large DHIS2 instances
+  (thousands of org units, data elements, etc.) and can time out or OOM the browser.
+  Use a reasonable default page size (20–50). Wire the UI to the `pager` response using
+  the `Pagination` component from `@dhis2/ui` — see `references/ui-patterns/tables.md`
+  for the full pagination pattern.
 
 Filters can be built dynamically — for example, only applying a search filter when the
 user has typed something:
@@ -259,6 +293,67 @@ export const useDeleteRoute = ({
 Always invalidate the relevant query keys in `onSuccess` — this ensures any list or detail
 view using that data refetches automatically. For deletions you can also use
 `queryClient.removeQueries` to drop the specific item from cache immediately.
+
+### useAlert full API
+
+`useAlert` accepts either a static string or a dynamic message function as its first
+argument. Use the function form when the message needs to include runtime values:
+
+```typescript
+const { show: showError } = useAlert(
+    ({ message }: { message: string }) =>
+        i18n.t('Failed to save route: {{message}}', { message }),
+    { critical: true }
+)
+
+// Call with the value at runtime:
+showError({ message: error.details.message })
+```
+
+Alert options:
+
+| Option                              | Effect                                                      |
+| ----------------------------------- | ----------------------------------------------------------- |
+| `{ critical: true }`                | Red — for errors                                            |
+| `{ success: true }`                 | Green — for confirmations                                   |
+| `{ warning: true }`                 | Yellow — for warnings                                       |
+| `{ duration: 5000 }`                | Auto-dismiss after N ms (default is permanent for critical) |
+| `{ actions: [{ label, onClick }] }` | Render action buttons inside the alert                      |
+
+`useAlert` also returns `hide()` to dismiss programmatically:
+
+```typescript
+const { show, hide } = useAlert(i18n.t('Processing…'))
+```
+
+### JSON Patch mutations
+
+Use `type: 'json-patch'` for partial updates — changing one or a few fields without
+sending the full object. The `data` array is a standard JSON Patch document:
+
+```typescript
+const toggleMutation = {
+    resource: 'routes',
+    id: route.id,
+    type: 'json-patch' as const,
+    data: [{ op: 'replace', path: '/disabled', value: !route.disabled }],
+}
+
+await dataEngine.mutate(toggleMutation)
+```
+
+Common operations: `replace` (update a field), `add` (append to an array), `remove`
+(delete a field or array item). Use this instead of a full `update` mutation when only
+one property changes — it avoids overwriting concurrent edits to other fields.
+
+### After mutations: refetch vs invalidateQueries
+
+How to refresh data after a mutation depends on which query layer the component uses:
+
+- **TanStack Query (`useApiDataQuery`)** — call `queryClient.invalidateQueries({ queryKey: [...] })` in `onSuccess`. This marks cached data stale and triggers a background refetch for any mounted query with a matching key.
+- **app-runtime (`useDataQuery`)** — the query result exposes a `refetch` function. Call it directly after the mutation resolves.
+
+Don't mix the two — if a component uses `useDataQuery`, `invalidateQueries` won't trigger a refetch since that cache is managed by app-runtime, not TanStack Query.
 
 ## Step 5: Handle version differences with feature flags
 
@@ -372,7 +467,7 @@ Center the loader so it's visible regardless of page layout:
 The goal is simple: never show a blank screen. Either the user sees their data, a spinner,
 or a meaningful error message.
 
-## Best practices
+## Mandatory rules
 
 1. **Always fetch the source and read it before writing code.** Before writing any hook
    or mutation, run `npx opensrc path dhis2/dhis2-core` (or with a version tag like

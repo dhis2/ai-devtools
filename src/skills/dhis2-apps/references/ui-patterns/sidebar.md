@@ -140,12 +140,13 @@ html {
     background: var(--sidenav-dark-bg);
     color: var(--colors-grey300);
     font-size: 16px;
-    text-align: left;
+    text-align: start;
     display: flex;
     align-items: center;
     width: 100%;
     min-height: 32px;
-    padding: 8px 8px 8px 12px;
+    padding-block: 8px;
+    padding-inline: 12px 8px;
     cursor: pointer;
 }
 
@@ -166,7 +167,7 @@ html {
 }
 
 .sidenavParentChevron {
-    margin-left: auto;
+    margin-inline-start: auto;
     width: 16px;
     height: 16px;
     transition: transform 0.1s linear;
@@ -182,7 +183,8 @@ html {
     display: flex;
     align-items: center;
     min-height: 32px;
-    padding: 8px 8px 8px 12px;
+    padding-block: 8px;
+    padding-inline: 12px 8px;
     background: var(--sidenav-dark-bg);
     text-decoration: none;
     color: var(--colors-grey300);
@@ -221,19 +223,19 @@ html {
 .sidenavLink :global(.active) {
     color: var(--colors-grey300);
     background: var(--sidenav-dark-bg-selected);
-    box-shadow: inset 6px 0px 0px 0px var(--colors-teal400);
+    border-inline-start: 6px solid var(--colors-teal400);
 }
 
 /* Indent links inside a parent */
 .sidenavParent .sidenavLink a {
-    padding-left: var(--spacers-dp32);
+    padding-inline-start: var(--spacers-dp32);
 }
 
 /* Footer */
 
 .sidenavFooter {
-    margin-top: auto;
-    padding-bottom: 52px;
+    margin-block-start: auto;
+    padding-block-end: 52px;
 }
 ```
 
@@ -247,7 +249,7 @@ import i18n from '@dhis2/d2-i18n'
 import { IconChevronLeft24 } from '@dhis2/ui'
 import cx from 'classnames'
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 import styles from './Sidebar.module.css'
 import {
     Sidenav,
@@ -428,7 +430,7 @@ to decide whether to collapse the sidebar.
 Create `src/components/layout/Layout.tsx`:
 
 ```tsx
-import { Outlet, useMatches } from 'react-router-dom'
+import { Outlet, useMatches } from 'react-router'
 import { Sidebar } from '../sidebar/Sidebar'
 import styles from './Layout.module.css'
 
@@ -508,7 +510,7 @@ default cap of `1400px`, but routes can opt out via the `fullWidth` route handle
 Create `src/components/layout/PageWrapper.tsx`:
 
 ```tsx
-import { useMatches } from 'react-router-dom'
+import { useMatches } from 'react-router'
 import { RouteHandle } from './Layout'
 
 interface PageWrapperProps {
@@ -560,7 +562,7 @@ Set `collapseSidebar` on routes where the sidebar should be hidden (detail/edit 
 Set `fullWidth` on routes that need the full viewport width (dashboards, comparison views).
 
 ```tsx
-import { createHashRouter, Outlet } from 'react-router-dom'
+import { createHashRouter, Outlet } from 'react-router'
 import { SyncUrlWithGlobalShell } from '@/utils/SyncUrlWithGlobalShell'
 import { Layout, RouteHandle } from '@/components/layout/Layout'
 import { PageWrapper } from '@/components/layout/PageWrapper'

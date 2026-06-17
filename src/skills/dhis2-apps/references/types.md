@@ -13,6 +13,14 @@ The package covers the last four DHIS2 API versions: **v40, v41, v42, v43**.
 The default (unversioned) import resolves to the latest (**v43**). Use a versioned path
 when the project targets an older version (see [Targeting a specific version](#targeting-a-specific-version)).
 
+| Task                                        | Pattern                                  | Section                        |
+| ------------------------------------------- | ---------------------------------------- | ------------------------------ |
+| Type a full API resource                    | Named import from `@dhis2/api-types`     | § Importing types              |
+| Narrow to only the fields you're requesting | `PickWithFieldFilters<T, typeof FIELDS>` | § Utility types                |
+| Type a paginated list response              | `PagedResponse<T, 'resourceName'>`       | § Utility types                |
+| Target an older DHIS2 version               | Versioned import `@dhis2/api-types/v42`  | § Targeting a specific version |
+| Resource not covered by the spec            | Manual type derived from opensrc         | § When types aren't available  |
+
 ---
 
 ## Importing types

@@ -1,9 +1,114 @@
 # Forms
 
-Use **React Hook Form** for form state management and **Zod** for schema validation.
-Mutations go through TanStack Query with `useDataEngine` (see `references/data-fetching.md`
-for the mutation pattern). Wire `@dhis2/ui` inputs to React Hook Form via `Controller`
-since they don't expose a standard `ref`.
+## Which form library to use
+
+Before writing any form code, check `package.json` to see which library is already in use:
+
+| Already in `package.json`              | Pattern to follow                                               |
+| -------------------------------------- | --------------------------------------------------------------- |
+| `react-final-form` / `@dhis2/ui-forms` | [Final Form + ui-forms](#final-form--ui-forms)                  |
+| `react-hook-form`                      | [React Hook Form + Zod](#react-hook-form--zod)                  |
+| Neither                                | Use [React Hook Form + Zod](#react-hook-form--zod) for new apps |
+
+Do not mix both libraries in the same app.
+
+---
+
+## Final Form + ui-forms
+
+Most existing DHIS2 apps use `react-final-form` with `@dhis2/ui-forms`. The `@dhis2/ui-forms`
+package ships `FF`-suffixed components (`InputFieldFF`, `SingleSelectFieldFF`, etc.) that
+are purpose-built Final Form field adapters — pass them directly as the `component` prop
+on `Field`, no `Controller` wrapper needed.
+
+`@dhis2/ui-forms` is re-exported from `@dhis2/ui`, so import everything from `@dhis2/ui`:
+
+```tsx
+import {
+    InputFieldFF,
+    SingleSelectFieldFF,
+    SwitchFieldFF,
+    TextAreaFieldFF,
+    hasValue,
+    composeValidators,
+    email,
+    number,
+} from '@dhis2/ui'
+import { Form, Field } from 'react-final-form'
+import i18n from '@dhis2/d2-i18n'
+
+const MyForm = ({ onSubmit }) => (
+    <Form onSubmit={onSubmit}>
+        {({ handleSubmit, submitting, pristine }) => (
+            <form onSubmit={handleSubmit}>
+                <Field
+                    name="name"
+                    component={InputFieldFF}
+                    label={i18n.t('Name')}
+                    validate={hasValue}
+                />
+                <Field
+                    name="email"
+                    component={InputFieldFF}
+                    label={i18n.t('Email')}
+                    validate={composeValidators(hasValue, email)}
+                />
+                <Field
+                    name="valueType"
+                    component={SingleSelectFieldFF}
+                    label={i18n.t('Value type')}
+                    validate={hasValue}
+                >
+                    <SingleSelectOption label="Text" value="TEXT" />
+                    <SingleSelectOption label="Number" value="NUMBER" />
+                </Field>
+                <Button
+                    type="submit"
+                    primary
+                    loading={submitting}
+                    disabled={submitting || pristine}
+                >
+                    {i18n.t('Save')}
+                </Button>
+            </form>
+        )}
+    </Form>
+)
+```
+
+### Available FF components
+
+| Component             | Use for                       |
+| --------------------- | ----------------------------- |
+| `InputFieldFF`        | Text, number, password inputs |
+| `TextAreaFieldFF`     | Multi-line text               |
+| `SingleSelectFieldFF` | Single-choice dropdown        |
+| `MultiSelectFieldFF`  | Multi-choice dropdown         |
+| `SwitchFieldFF`       | Boolean toggle                |
+| `CheckboxFieldFF`     | Boolean checkbox              |
+| `RadioFieldFF`        | Radio button group            |
+
+### Built-in validators
+
+Import from `@dhis2/ui` — compose with `composeValidators`:
+
+```tsx
+import { hasValue, email, number, integer, url, composeValidators } from '@dhis2/ui'
+
+validate={composeValidators(hasValue, email)}
+```
+
+Available: `hasValue`, `email`, `number`, `integer`, `url`, `alphaNumeric`,
+`dhis2Password`, `dhis2Username`, `internationalPhoneNumber`, `createMaxCharacterLength(n)`,
+`createMinCharacterLength(n)`, `createMaxNumber(n)`, `createMinNumber(n)`.
+
+---
+
+## React Hook Form + Zod
+
+Use for new apps not already using Final Form. Mutations go through TanStack Query with
+`useDataEngine` (see `references/data-fetching.md` for the mutation pattern). Wire
+`@dhis2/ui` inputs via `Controller` since they don't expose a standard `ref`.
 
 ```tsx
 import { useForm, Controller } from 'react-hook-form'
@@ -135,6 +240,78 @@ const DataElementForm = ({ onSubmit, isPending }: DataElementFormProps) => {
 }
 ```
 
+## MultiSelect
+
+Use `MultiSelectField` + `MultiSelectOption` for fields where the user picks multiple
+values. Wire it to React Hook Form the same way as `SingleSelectField` — the value is a
+`string[]`:
+
+```tsx
+import { MultiSelectField, MultiSelectOption } from '@dhis2/ui'
+;<Controller
+    name="authorities"
+    control={control}
+    render={({ field, fieldState }) => (
+        <MultiSelectField
+            label={i18n.t('Authorities')}
+            selected={field.value ?? []}
+            onChange={({ selected }) => field.onChange(selected)}
+            error={Boolean(fieldState.error)}
+            validationText={fieldState.error?.message}
+            filterable
+            clearable
+        >
+            {authorities.map((a) => (
+                <MultiSelectOption
+                    key={a.id}
+                    label={a.displayName}
+                    value={a.id}
+                />
+            ))}
+        </MultiSelectField>
+    )}
+/>
+```
+
+`filterable` adds a search box inside the dropdown. `clearable` adds an × to reset the
+selection. Both are recommended for lists longer than ~5 items.
+
+For Final Form apps, use `MultiSelectFieldFF` instead — it handles the wiring automatically
+(see [Final Form + ui-forms](#final-form--ui-forms)).
+
+## Field wrapper for custom inputs
+
+When a component from `@dhis2/ui` doesn't come with a built-in label and validation
+display, wrap it in `Field` to get consistent label, help text, and error styling:
+
+```tsx
+import { Field, Switch } from '@dhis2/ui'
+;<Controller
+    name="disabled"
+    control={control}
+    render={({ field, fieldState }) => (
+        <Field
+            label={i18n.t('Disabled')}
+            helpText={i18n.t('Disabled routes will not receive any traffic.')}
+            error={Boolean(fieldState.error)}
+            validationText={fieldState.error?.message}
+        >
+            <Switch
+                label={i18n.t('Disable this route')}
+                checked={field.value}
+                onChange={({ checked }) => field.onChange(checked)}
+            />
+        </Field>
+    )}
+/>
+```
+
+`Field` is also useful for wrapping custom inputs, date pickers, or any component that
+manages its own internal state but needs standard form field chrome.
+
+For Final Form apps, use `SwitchFieldFF` directly as the `component` prop on `Field` —
+no `Field` wrapper needed.
+
 ## Help text and placeholders
 
 `InputField` accepts `helpText` for instructional copy beneath the field and `placeholder`
@@ -209,6 +386,20 @@ and render a `CircularLoader` alongside it instead.
 > real value once data arrives (`reset()` or `setValue()`), or wait until options are loaded
 > before rendering the form at all.
 
+## Input type selection rules
+
+Choose input components based on the number of options:
+
+| Options count | Single choice       | Multiple choice    |
+| ------------- | ------------------- | ------------------ |
+| ≤ 5–7         | Radio buttons       | Checkboxes         |
+| > 5–7         | `SingleSelectField` | `MultiSelectField` |
+
+- A single standalone checkbox **must never be a required field** — use a `Switch` or a
+  `SingleSelectField` instead if the choice is mandatory.
+- Always place form actions (submit/cancel buttons) at the **end** of the form.
+- A form should have **one clear primary action** — use `primary` on one button only.
+
 ## Modal vs. dedicated page
 
 Match form complexity to its container. Simple, low-field forms (e.g. rename, quick
@@ -217,7 +408,7 @@ page instead — this gives full control over layout, validation feedback, and n
 blocking. The convention is to append `/new` to the current route (e.g. `/data-elements/new`)
 and navigate there on "Create new" actions. See `references/routing.md` for route setup.
 
-## Key points
+## React Hook Form + @dhis2/ui wiring rules
 
 - Spread `{...field}` then override `onChange` — `@dhis2/ui` uses `onChange({ value })`, not `onChange(event)`. `SingleSelectField` uses `selected` / `onChange({ selected })` instead.
 - Use `fieldState` from Controller render props for error display.
@@ -231,7 +422,7 @@ Prevent users from accidentally leaving a form with unsaved edits. Use React Rou
 `useBlocker` wrapped in a custom hook that exposes a confirmation modal trigger:
 
 ```tsx
-import { useBlocker } from 'react-router-dom'
+import { useBlocker } from 'react-router'
 import { useCallback } from 'react'
 
 export const useNavigationBlocker = ({
