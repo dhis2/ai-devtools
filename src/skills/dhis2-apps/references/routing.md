@@ -22,7 +22,7 @@ immediately — e.g. `#/enrollments?programId=IpHINAT79UW&orgUnitId=DiszpKrYNg8`
 Use `useSearchParams` from React Router to read and write query parameters:
 
 ```tsx
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 
 const [searchParams, setSearchParams] = useSearchParams()
 const programId = searchParams.get('programId')

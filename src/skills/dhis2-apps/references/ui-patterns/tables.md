@@ -20,7 +20,7 @@ A reusable hook that keeps pagination state in the URL. Place it in `src/hooks/`
 
 ```tsx
 import { useCallback, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router'
 
 const DEFAULT_PAGE_SIZE = 10
 

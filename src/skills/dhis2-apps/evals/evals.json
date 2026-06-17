@@ -20,7 +20,7 @@
                 {
                     "name": "hash-router",
                     "type": "content_check",
-                    "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+                    "description": "Uses createHashRouter from react-router (not BrowserRouter, HashRouter component, or createBrowserRouter)"
                 },
                 {
                     "name": "popstate-sync",
@@ -48,7 +48,7 @@
                 {
                     "name": "hash-router",
                     "type": "content_check",
-                    "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+                    "description": "Uses createHashRouter from react-router (not BrowserRouter, HashRouter component, or createBrowserRouter)"
                 },
                 {
                     "name": "popstate-sync",
@@ -76,7 +76,7 @@
                 {
                     "name": "hash-router",
                     "type": "content_check",
-                    "description": "Uses createHashRouter from react-router-dom (not BrowserRouter, HashRouter component, or createBrowserRouter)"
+                    "description": "Uses createHashRouter from react-router (not BrowserRouter, HashRouter component, or createBrowserRouter)"
                 },
                 {
                     "name": "popstate-sync",

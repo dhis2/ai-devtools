@@ -422,7 +422,7 @@ Prevent users from accidentally leaving a form with unsaved edits. Use React Rou
 `useBlocker` wrapped in a custom hook that exposes a confirmation modal trigger:
 
 ```tsx
-import { useBlocker } from 'react-router-dom'
+import { useBlocker } from 'react-router'
 import { useCallback } from 'react'
 
 export const useNavigationBlocker = ({

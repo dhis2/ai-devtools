@@ -249,7 +249,7 @@ import i18n from '@dhis2/d2-i18n'
 import { IconChevronLeft24 } from '@dhis2/ui'
 import cx from 'classnames'
 import { useState } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink } from 'react-router'
 import styles from './Sidebar.module.css'
 import {
     Sidenav,
@@ -430,7 +430,7 @@ to decide whether to collapse the sidebar.
 Create `src/components/layout/Layout.tsx`:
 
 ```tsx
-import { Outlet, useMatches } from 'react-router-dom'
+import { Outlet, useMatches } from 'react-router'
 import { Sidebar } from '../sidebar/Sidebar'
 import styles from './Layout.module.css'
 
@@ -510,7 +510,7 @@ default cap of `1400px`, but routes can opt out via the `fullWidth` route handle
 Create `src/components/layout/PageWrapper.tsx`:
 
 ```tsx
-import { useMatches } from 'react-router-dom'
+import { useMatches } from 'react-router'
 import { RouteHandle } from './Layout'
 
 interface PageWrapperProps {
@@ -562,7 +562,7 @@ Set `collapseSidebar` on routes where the sidebar should be hidden (detail/edit 
 Set `fullWidth` on routes that need the full viewport width (dashboards, comparison views).
 
 ```tsx
-import { createHashRouter, Outlet } from 'react-router-dom'
+import { createHashRouter, Outlet } from 'react-router'
 import { SyncUrlWithGlobalShell } from '@/utils/SyncUrlWithGlobalShell'
 import { Layout, RouteHandle } from '@/components/layout/Layout'
 import { PageWrapper } from '@/components/layout/PageWrapper'
