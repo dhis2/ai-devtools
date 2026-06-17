@@ -3,42 +3,75 @@
 This is the step-by-step recipe for setting up a new DHIS2 app with the opinionated
 tech stack. Follow every step in order — don't skip or substitute.
 
-**Tech stack:** TypeScript, pnpm, React Router DOM, TanStack Query v4, TanStack Table,
+**Tech stack:** TypeScript, pnpm, React Router, TanStack Query, TanStack Table,
 `@` path alias, Vite.
 
 ---
 
-## Step 0: Check the current directory and confirm the target DHIS2 version
+## Before you begin: confirm the plan with the user
 
-Run `ls -A` to check whether the current directory is empty.
+Before running any commands, tell the user what you're about to do. Present a short
+summary like:
 
-- **Empty**: scaffold into the current directory — skip asking for an app name, use `.`
-  as the scaffold target and derive the app name from the directory name (`basename $PWD`).
-- **Not empty**: ask the user for the app name (kebab-cased, e.g. `facility-registry`).
-  Always use a tool to ask the question if available. For Claude Code, this is the
-  `AskUserQuestion` tool.
+> "I'll scaffold a new DHIS2 app targeting the **latest DHIS2 API version (v43)** with the following setup:
+>
+> - **Scaffold**: `pnpm create @dhis2/app` with the `react-router` template (TypeScript)
+> - **App name**: `<derived from directory or provided by user>`
+> - **`d2.config.js`**: type `app`, entry point `./src/App.tsx`
+> - **Libraries**: `@tanstack/react-query`, `@tanstack/react-table`
+> - **Path alias**: `@` → `src/` (provided by template)
+> - **Code quality**: DHIS2 shared ESLint + Prettier configs, husky pre-commit hook
+> - **Navigation**: sidebar layout with React Router
+>
+> Ready to go? Let me know if you'd like to change anything, or just say yes to start."
 
-Tell the user you'll target the latest DHIS2 API version (currently **v43**) by default,
-and ask if they need to target a different version. If they specify an older version,
-use that as the default for all type imports and API decisions throughout the project —
-see `references/types.md` for version-specific import paths.
+Before presenting this summary, run `ls -A` to check whether the current directory is
+empty and determine the app name:
+
+- **Empty**: derive the app name from the directory name (`basename $PWD`) and use `.`
+  as the scaffold target. Include the derived name in the plan summary above.
+- **Not empty**: ask for the app name (kebab-cased, e.g. `facility-registry`) as part of
+  gathering information before presenting the summary. Use the `AskUserQuestion` tool if
+  available. Include the chosen name in the plan summary above.
+
+Wait for the user to confirm before running any commands. If they request changes,
+adjust accordingly. Once confirmed, proceed through the steps below without asking
+further questions — make all decisions silently and use the defaults described here.
+
+---
+
+## Step 0: Scaffold target
+
+App name and scaffold target were determined in the "Before you begin" step. Use them
+directly — no further questions needed here.
+
+Target the **latest DHIS2 API version (v43)** for all type imports and API decisions.
+See `references/types.md` for version-specific import paths.
 
 ## Step 1: Scaffold
 
 **If the current directory is empty:**
 
 ```bash
-pnpm create @dhis2/app@latest . --typescript --yes
+pnpm create @dhis2/app@latest . --typescript --template react-router --yes
 ```
 
 **If the current directory is not empty:**
 
 ```bash
-pnpm create @dhis2/app@latest <app-name> --typescript --yes
+pnpm create @dhis2/app@latest <app-name> --typescript --template react-router --yes
 cd <app-name>
 ```
 
-Always use `--typescript`. The `--yes` flag accepts defaults (pnpm, basic template).
+Always use `--typescript` and `--template react-router`. The `--yes` flag accepts remaining defaults.
+
+The `react-router` template already includes:
+
+- `tsconfig.json` with the `@/*` path alias configured
+- `viteConfigExtensions.mts` with the Vite `@` alias
+- A base `d2.config.js` wired to `viteConfigExtensions.mts`
+
+Steps 2–4 update these files — don't recreate them from scratch.
 
 ## Step 2: Update DHIS2 platform libraries
 
@@ -59,14 +92,14 @@ pnpm update --latest @dhis2/api-types
 ## Step 3: Install the stack
 
 ```bash
-pnpm add @tanstack/react-query@4 @tanstack/react-table react-router-dom
+pnpm add @tanstack/react-query @tanstack/react-table
 ```
 
-TanStack Query must be version 4 — do not install v5.
+## Step 4: Update `d2.config.js`
 
-## Step 4: Configure `d2.config.js`
-
-Replace the scaffolded config with:
+The template generates a valid `d2.config.js` — only two things need changing: add the
+`name` field and update the entry point to `App.tsx` (we consolidate router + providers
+there instead of using the template's separate `AppWrapper.tsx`):
 
 ```javascript
 /** @type {import('@dhis2/cli-app-scripts').D2Config} */
@@ -78,54 +111,20 @@ const config = {
         app: './src/App.tsx',
     },
 
-    viteConfigExtensions: './vite.config.mts',
+    viteConfigExtensions: './viteConfigExtensions.mts',
 }
 
 module.exports = config
 ```
 
-## Step 5: Create `vite.config.mts`
+Leave `viteConfigExtensions.mts` as-is — the template already configures the `@` alias
+there. Do not rename it or create a separate `vite.config.mts`.
 
-Create this file in the project root:
-
-```typescript
-import path from 'path'
-import { defineConfig } from 'vite'
-
-export default defineConfig({
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, 'src'),
-        },
-    },
-})
-```
-
-This enables `@/components/Foo` imports instead of relative paths.
-
-## Step 6: Add the path alias to `tsconfig.json`
-
-Add the `paths` mapping so TypeScript resolves the `@` alias:
-
-```json
-{
-    "compilerOptions": {
-        "jsx": "react-jsx", // Overwrite the default jsx setting from the scaffolder
-        "paths": {
-            "@/*": ["./src/*"]
-        }
-    }
-}
-```
-
-Merge this into the existing `tsconfig.json` — don't overwrite the other compiler options
-that the scaffolder set up.
-
-## Step 7: Create `src/utils/SyncUrlWithGlobalShell.tsx`
+## Step 5: Create `src/utils/SyncUrlWithGlobalShell.tsx`
 
 ```tsx
 import { useEffect } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router'
 
 /*
  * When the app runs in the DHIS2 Global Shell, react-router@6+ no longer
@@ -152,13 +151,12 @@ This is a layout route component — it wraps all routes so the Global Shell URL
 in sync. Without it, the browser URL won't update when navigating. Every route should
 be a child of this layout.
 
-## Step 8: Set up `src/App.tsx`
+## Step 6: Replace `src/App.tsx`
 
-Replace the contents of `src/App.tsx` with:
+Replace the entire contents of `src/App.tsx` with:
 
 ```tsx
-import React from 'react'
-import { createHashRouter, RouterProvider } from 'react-router-dom'
+import { createHashRouter, RouterProvider } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CssReset, CssVariables } from '@dhis2/ui'
 import { SyncUrlWithGlobalShell } from '@/utils/SyncUrlWithGlobalShell'
@@ -188,6 +186,9 @@ const App = () => (
 export default App
 ```
 
+This replaces the template's `App.tsx` and absorbs the role of `AppWrapper.tsx` — you
+can delete `AppWrapper.tsx` after this step.
+
 DHIS2 apps run inside an iframe in the DHIS2 shell, so use `createHashRouter` — not
 `BrowserRouter` or `createBrowserRouter`. Hash routing avoids conflicts with the
 platform's own routing.
@@ -200,7 +201,7 @@ All routes are nested under the `SyncUrlWithGlobalShell` layout route, so every
 page automatically keeps the Global Shell URL in sync. Add new routes as children
 of that layout.
 
-## Step 9: Create `src/interfaces/apiQueryTypes.ts`
+## Step 7: Create `src/interfaces/apiQueryTypes.ts`
 
 ```typescript
 export type PossiblyDynamic<Type, InputType> =
@@ -239,47 +240,38 @@ These types describe the shape of a DHIS2 API query passed to the data engine.
 `ResourceQuery` is the main one — it maps to a DHIS2 API resource with optional
 id, request body, and query parameters.
 
-## Step 10: Create `src/utils/useApiDataQuery.ts`
+## Step 8: Create `src/utils/useApiDataQuery.ts`
 
 ```typescript
 import { useDataEngine } from '@dhis2/app-runtime'
-import {
-    useQuery,
-    QueryFunction,
-    UseQueryOptions,
-    QueryKey,
-} from '@tanstack/react-query'
+import { useQuery, UseQueryOptions, QueryKey } from '@tanstack/react-query'
 import { ResourceQuery } from '../interfaces/apiQueryTypes'
 
 type UseApiDataQueryProps<
-    TResultData,
+    TData,
     TError = Error,
-    TData = TResultData,
     TQueryKey extends QueryKey = QueryKey,
-> = Omit<UseQueryOptions<TResultData, TError, TData, TQueryKey>, 'queryFn'> & {
+> = Omit<UseQueryOptions<TData, TError, TData, TQueryKey>, 'queryFn'> & {
     query: ResourceQuery
 }
 
 export const useApiDataQuery = <
-    TResultData,
+    TData,
     TError = Error,
-    TData = TResultData,
     TQueryKey extends QueryKey = QueryKey,
 >({
     query,
     queryKey,
     ...options
-}: UseApiDataQueryProps<TResultData, TError, TData, TQueryKey>) => {
+}: UseApiDataQueryProps<TData, TError, TQueryKey>) => {
     const dataEngine = useDataEngine()
 
-    const queryFn: QueryFunction<TResultData, TQueryKey> = async () => {
-        const response = await dataEngine.query({ apiDataQuery: query })
-        return response.apiDataQuery as TResultData
-    }
-
-    return useQuery<TResultData, TError, TData, TQueryKey>({
+    return useQuery<TData, TError, TData, TQueryKey>({
         queryKey,
-        queryFn,
+        queryFn: async () => {
+            const response = await dataEngine.query({ apiDataQuery: query })
+            return response.apiDataQuery as TData
+        },
         ...options,
     })
 }
@@ -288,23 +280,15 @@ export const useApiDataQuery = <
 Always use `useApiDataQuery` for data fetching — never use `useDataQuery` from
 `@dhis2/app-runtime` directly.
 
-## After bootstrapping: code quality tooling
+## After bootstrapping: set up code quality tooling
 
-Before writing any app code, ask the user:
-
-> "Do you want to use the DHIS2 shared ESLint and Prettier configs (`@dhis2/config-eslint`,
-> `@dhis2/config-prettier`) for consistency with the wider DHIS2 ecosystem, or do you have
-> your own ESLint/Prettier setup?"
-
-If they choose DHIS2 shared configs (recommended), set everything up. If they have their own,
-skip to the husky + lint-staged step and wire it to their existing lint script.
-
-### DHIS2 shared configs
+Set up the DHIS2 shared ESLint and Prettier configs — these are the standard choice for
+DHIS2 apps and align with the wider ecosystem.
 
 **Install packages:**
 
 ```bash
-pnpm add -D eslint @eslint/compat prettier husky lint-staged @dhis2/config-eslint @dhis2/config-prettier
+pnpm add -D eslint @eslint/compat prettier husky lint-staged @dhis2/config-eslint @dhis2/config-prettier eslint-import-resolver-typescript
 ```
 
 **Create `eslint.config.mjs`** — use the `/react` export for React apps:
@@ -321,6 +305,11 @@ export default defineConfig([
     includeIgnoreFile(gitignorePath, 'Imported .gitignore patterns'),
     {
         extends: [config],
+        settings: {
+            'import/resolver': {
+                typescript: true,
+            },
+        },
     },
 ])
 ```
@@ -336,6 +325,13 @@ const config = {
 }
 
 export default config
+```
+
+Once ESLint is configured, run a fix pass to auto-correct import ordering in the
+scaffolded files:
+
+```bash
+pnpm eslint --fix
 ```
 
 ### Husky + lint-staged
@@ -364,8 +360,8 @@ Add to `package.json`:
 
 ### CI lint step
 
-Offer to add a lint job to GitHub Actions. If they already have a CI workflow, add
-`pnpm lint` as a step there. Otherwise create `.github/workflows/lint.yml`:
+Add a lint job to GitHub Actions. If a CI workflow already exists, add `pnpm lint` as
+a step there. Otherwise create `.github/workflows/lint.yml`:
 
 ```yaml
 name: Lint
@@ -385,15 +381,6 @@ jobs:
             - run: pnpm install
             - run: pnpm lint
 ```
-
-## After bootstrapping: does the app need a setup step?
-
-Ask the user whether the app requires admin configuration before it can be used — for example,
-selecting a program, an org unit level, or other instance-specific metadata. If it does, read
-`references/app-configuration.md` and implement the setup screen as part of bootstrapping.
-
-Apps that work on any DHIS2 instance **must not hardcode** program IDs, org unit IDs, or
-other instance-specific values. They should always be admin-configurable.
 
 ## After bootstrapping: set up sidebar navigation
 
