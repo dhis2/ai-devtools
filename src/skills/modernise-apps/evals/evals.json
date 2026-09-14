@@ -1,0 +1,168 @@
+{
+    "skill_name": "modernise-apps",
+    "evals": [
+        {
+            "id": 0,
+            "name": "scaffold-js-migration",
+            "prompt": "I scaffolded this app with `pnpm create @dhis2/app` but picked yarn as the package manager before we standardized on pnpm across the team. Can you migrate it over to pnpm like our other apps?",
+            "expected_output": "A fresh, unmodified `pnpm create @dhis2/app --typescript=false --packageManager yarn` scaffold (JS, basic template). @dhis2/cli-app-scripts already ships at 12.10.3 in this scaffold, so the version-bump step is a no-op the agent should recognize rather than force. Needs: pnpm-workspace.yaml with the app-shell hoist patterns, pnpm import + removal of yarn.lock, packageManager field, and a successful pnpm install + build. No CI workflows or git hooks exist in a fresh scaffold, so those steps are naturally no-ops here.",
+            "files": ["fixtures/scaffold-js/"],
+            "assertions": [
+                "yarn.lock has been deleted from the app",
+                "pnpm-lock.yaml exists in the app",
+                "pnpm-workspace.yaml exists with a publicHoistPattern that covers @dhis2/*",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts is left at (or bumped to) >=12.7.0 -- it already ships at 12.10.3 in this scaffold",
+                "pnpm install completes successfully",
+                "pnpm build completes successfully"
+            ]
+        },
+        {
+            "id": 1,
+            "name": "scaffold-ts-migration",
+            "prompt": "Same as our JS apps -- I scaffolded this one with `pnpm create @dhis2/app` using TypeScript, but yarn ended up as the package manager. Can you get it onto pnpm like the rest of our apps?",
+            "expected_output": "A fresh, unmodified `pnpm create @dhis2/app --typescript=true --packageManager yarn` scaffold (TS, basic template). Same expectations as scaffold-js-migration, plus tsconfig.json/TypeScript setup should be left intact and a type-check should still pass.",
+            "files": ["fixtures/scaffold-ts/"],
+            "assertions": [
+                "yarn.lock has been deleted from the app",
+                "pnpm-lock.yaml exists in the app",
+                "pnpm-workspace.yaml exists with a publicHoistPattern that covers @dhis2/*",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts is left at (or bumped to) >=12.7.0 -- it already ships at 12.10.3 in this scaffold",
+                "pnpm install completes successfully",
+                "pnpm build completes successfully",
+                "tsconfig.json and the TypeScript setup were left intact"
+            ]
+        },
+        {
+            "id": 2,
+            "name": "real-aggregate-data-entry-app",
+            "prompt": "Please migrate this app from yarn to pnpm, the same way our other apps have been doing it.",
+            "expected_output": "A real, unmigrated snapshot of dhis2/aggregate-data-entry-app@master (as of this eval's creation). @dhis2/cli-app-scripts here is already ^12.11.0, so that step is already done -- the agent should notice and not redundantly 'bump' it. Needs: pnpm-workspace.yaml with the app-shell hoist patterns, pnpm import + removal of yarn.lock, packageManager field, fixing any @dhis2-ui/* or @dhis2/ui-forms imports found under src/ to use @dhis2/ui instead, updating .hooks/* and .github/workflows/*.yml from yarn to pnpm (pointing any dhis2/workflows-platform reusable workflow refs at the @pnpm branch), and a successful pnpm install + build. There is a real open PR (dhis2/aggregate-data-entry-app#481, branch upgrade/pnpm) that did this exact migration -- useful as a sanity-check reference for what changes were actually needed, though it may not be the final/merged state.",
+            "files": ["fixtures/real-aggregate-data-entry-app/"],
+            "assertions": [
+                "yarn.lock has been deleted from the app",
+                "pnpm-lock.yaml exists in the app",
+                "pnpm-workspace.yaml exists with a publicHoistPattern that covers @dhis2/* and other app-shell-relevant packages",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts was left at (or bumped to) >=12.7.0 without being redundantly re-bumped or downgraded",
+                ".hooks/pre-commit and .hooks/commit-msg were updated to invoke pnpm instead of yarn",
+                "every .github/workflows/*.yml file that referenced yarn was updated to reference pnpm, and any dhis2/workflows-platform reusable workflow refs point at @pnpm",
+                "any @dhis2-ui/* or @dhis2/ui-forms imports found under src/ were updated to import from @dhis2/ui",
+                "pnpm install completes without unresolved dependency/module errors",
+                "pnpm build completes successfully"
+            ]
+        },
+        {
+            "id": 3,
+            "name": "real-route-manager-app",
+            "prompt": "Can you get this app moved over from yarn to pnpm? Want to keep it consistent with the rest of our apps.",
+            "expected_output": "A real, unmigrated snapshot of dhis2/route-manager-app@main (as of this eval's creation) -- a TypeScript DHIS2 app. @dhis2/cli-app-scripts here is still ^12.3.0, so it genuinely needs bumping. Same migration steps as the other evals, including pointing any dhis2/workflows-platform reusable workflow refs at @pnpm. TypeScript should not need any special handling beyond what the skill already covers. pnpm install and build should succeed afterwards.",
+            "files": ["fixtures/real-route-manager-app/"],
+            "assertions": [
+                "yarn.lock has been deleted from the app",
+                "pnpm-lock.yaml exists in the app",
+                "pnpm-workspace.yaml exists with an appropriate publicHoistPattern covering @dhis2/*",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts was bumped from ^12.3.0 to >=12.7.0",
+                ".hooks and .github/workflows/*.yml were updated from yarn to pnpm, and any dhis2/workflows-platform reusable workflow refs point at @pnpm",
+                "pnpm install completes without unresolved dependency/module errors",
+                "pnpm build completes successfully",
+                "tsconfig.json and the app's TypeScript setup were left intact"
+            ]
+        },
+        {
+            "id": 4,
+            "name": "style-configs-route-manager-app",
+            "prompt": "Can you get this app off @dhis2/cli-style and onto our shared configs, like we've been doing with our other apps?",
+            "expected_output": "A real snapshot of dhis2/route-manager-app (TypeScript) still on @dhis2/cli-style (`lint: yarn tsc && d2-style check`, `@dhis2/cli-style: ^10.7.6`) with a CI job at `lint: uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1`. No .hooks/.husky directory exists in this fixture, so the hook-migration part of Step 8 is a no-op -- the agent should recognize that rather than inventing hooks that weren't there. This fixture has NO .stylelintrc.js or .ls-lint.yml -- only eslint/prettier were ever configured, so the agent should recognize that and not introduce stylelint/ls-lint tooling the app never had. `@dhis2/ui` is at `^10.1.11`, well behind current -- since the skill bundles a non-breaking @dhis2/ui bump into this task, that should happen even though the prompt doesn't ask for it by name. Needs: @dhis2/cli-style removed, @dhis2/config-eslint + @dhis2/config-prettier + @eslint/compat added, eslint.config.mjs + .prettierrc.mjs added, .eslintrc.js/.prettierrc.js removed, lint/format scripts updated, the reusable lint.yml@v1 CI job folded into an inline lint step, @dhis2/ui bumped within its current major, and pnpm/yarn lint passing afterwards.",
+            "files": ["fixtures/real-route-manager-app/"],
+            "assertions": [
+                "@dhis2/cli-style is removed from package.json entirely",
+                "eslint.config.mjs exists and imports from @dhis2/config-eslint",
+                ".prettierrc.mjs exists and imports from @dhis2/config-prettier",
+                "the old .eslintrc.js and .prettierrc.js are gone",
+                "package.json's lint script no longer calls d2-style (uses eslint and prettier directly)",
+                "the separate reusable lint.yml@v1 CI job is gone and lint now runs as an inline step in the remaining job",
+                "eslint runs successfully against the app with no config-resolution errors",
+                "prettier -c . runs successfully with no config-resolution errors",
+                "no stylelint or ls-lint config was introduced -- this app never had either configured under cli-style",
+                "@dhis2/ui was bumped to the latest version within its current major (was ^10.1.11)"
+            ]
+        },
+        {
+            "id": 5,
+            "name": "style-configs-aggregate-data-entry-app",
+            "prompt": "Can you move this app off @dhis2/cli-style onto our shared configs? Same as the other apps.",
+            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on @dhis2/cli-style (`lint: d2-style check`, `@dhis2/cli-style: ^10.7.9`), with `.hooks/pre-commit` calling `d2-style check --staged` AND `.hooks/commit-msg` calling `d2-style check commit` directly (not just delegating to CI) -- this is the harder case the route-manager-app fixture doesn't cover, since the commit-msg hook needs a real commitlint replacement, not just deletion, per Step 9. This fixture ALSO has a real `.stylelintrc.js` (proxying `@dhis2/cli-style`'s `config.stylelint`) and a real, customized `.ls-lint.yml` (per-extension casing rules, not just the generic base `.dir: kebab-case`) -- the agent needs to notice both are configured, migrate them to @dhis2/config-stylelint/@dhis2/config-lslint, add `stylelint`/`@ls-lint/ls-lint` as real devDependencies (cli-style bundled its own copies of both, so the app never had them directly), and preserve the custom ls-lint rules rather than blowing them away with a blind copy of the generic shared base file. Also has a separate lint-commits CI job (unrelated, should stay untouched), a lint: uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1 job (should be folded into an inline step), and `@dhis2/ui` at `^10.16.1` that should get a non-breaking bump.",
+            "files": ["fixtures/real-aggregate-data-entry-app/"],
+            "assertions": [
+                "@dhis2/cli-style is removed from package.json entirely",
+                "eslint.config.mjs exists and imports from @dhis2/config-eslint",
+                ".prettierrc.mjs exists and imports from @dhis2/config-prettier",
+                "the old .eslintrc.js and .prettierrc.js are gone",
+                "package.json's lint script no longer calls d2-style",
+                ".hooks/ is gone and .husky/pre-commit exists calling lint-staged",
+                ".husky/commit-msg exists and calls commitlint (not d2-style) since the original .hooks/commit-msg called d2-style check commit directly",
+                "the lint-commits CI job is left untouched (unrelated to this migration)",
+                "the separate reusable lint.yml@v1 CI job is gone and lint now runs as an inline step",
+                "eslint runs successfully against the app with no config-resolution errors",
+                ".stylelintrc.* no longer proxies cli-style and imports @dhis2/config-stylelint instead",
+                ".ls-lint.yml is migrated to @dhis2/config-lslint's base, with this app's custom per-extension casing rules preserved rather than dropped",
+                "stylelint and @ls-lint/ls-lint were added as real devDependencies, not just their @dhis2/config-* packages",
+                "@dhis2/ui was bumped to the latest version within its current major (was ^10.16.1)"
+            ]
+        },
+        {
+            "id": 6,
+            "name": "combined-migration-route-manager-app",
+            "prompt": "Can you fully modernize this app? We want it moved over to pnpm and off @dhis2/cli-style onto our shared configs -- same as what we've been doing with our other apps.",
+            "expected_output": "A real snapshot of dhis2/route-manager-app still on yarn AND @dhis2/cli-style -- tests that both migrations, done together in one request, land on one coherent end-state rather than the agent doing the pnpm-shaped edit to a file (e.g. CI workflow, git hooks) and then redoing it for the style-configs migration, or leaving a half-pnpm/half-yarn or half-cli-style/half-shared-config hybrid anywhere. No .hooks/.husky directory exists in this fixture, and it has no .stylelintrc.js/.ls-lint.yml either -- only eslint/prettier were ever configured, so the agent shouldn't introduce stylelint/ls-lint tooling the app never had. `@dhis2/ui` is at `^10.1.11` and should get a non-breaking bump even though the prompt doesn't name it explicitly. Needs: everything from both pnpm-migration.md and style-configs-migration.md, with CI and any hooks reflecting the combined final state, not two sequential unreconciled passes.",
+            "files": ["fixtures/real-route-manager-app/"],
+            "assertions": [
+                "yarn.lock is gone and pnpm-lock.yaml exists",
+                "pnpm-workspace.yaml exists with a publicHoistPattern covering @dhis2/*",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts was bumped to >=12.7.0",
+                "@dhis2/cli-style is removed from package.json",
+                "eslint.config.mjs exists and imports @dhis2/config-eslint",
+                ".prettierrc.mjs exists and imports @dhis2/config-prettier",
+                "the old .eslintrc.js/.prettierrc.js are gone",
+                "package.json's lint script uses eslint/prettier directly, calls neither d2-style nor yarn",
+                "the CI workflow reflects one coherent end-state: pnpm-based install/build, the reusable lint.yml@v1 job folded into an inline step, no leftover yarn or d2-style references anywhere",
+                "pnpm install completes without unresolved dependency errors",
+                "eslint runs with no config-resolution errors",
+                "no stylelint or ls-lint config was introduced -- this app never had either configured under cli-style",
+                "@dhis2/ui was bumped to the latest version within its current major (was ^10.1.11)"
+            ]
+        },
+        {
+            "id": 7,
+            "name": "combined-migration-aggregate-data-entry-app",
+            "prompt": "Can you fully modernize this app? We want it moved over to pnpm and off @dhis2/cli-style onto our shared configs -- same as what we've been doing with our other apps.",
+            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on yarn AND @dhis2/cli-style, with real .hooks/pre-commit and .hooks/commit-msg (commit-msg calls d2-style check commit directly) -- the harder combined case, since the pnpm migration's hook step (swap yarn->pnpm in .hooks/*) and the style-configs migration's hook step (replace .hooks/ with .husky/ + lint-staged + commitlint) both touch the same two files. Also has a real `.stylelintrc.js` (proxying cli-style) and a customized `.ls-lint.yml` (per-extension casing rules) that both need migrating to @dhis2/config-stylelint/@dhis2/config-lslint, with stylelint/@ls-lint/ls-lint added as real devDependencies and the custom ls-lint rules preserved -- plus a non-breaking `@dhis2/ui` bump (currently ^10.16.1). Tests that the agent reconciles all of this into one final coherent state rather than doing a wasted intermediate pnpm-flavored edit to .hooks/ that then gets thrown away, or dropping the style-configs pieces because the request also mentioned pnpm.",
+            "files": ["fixtures/real-aggregate-data-entry-app/"],
+            "assertions": [
+                "yarn.lock is gone and pnpm-lock.yaml exists",
+                "pnpm-workspace.yaml exists with a publicHoistPattern covering @dhis2/*",
+                "package.json has a packageManager field set to a pnpm version",
+                "@dhis2/cli-app-scripts left at (or bumped to) >=12.7.0 without being redundantly downgraded",
+                "@dhis2/cli-style is removed from package.json",
+                "eslint.config.mjs exists and imports @dhis2/config-eslint",
+                ".prettierrc.mjs exists and imports @dhis2/config-prettier",
+                "the old .eslintrc.js/.prettierrc.js are gone",
+                ".hooks/ is gone (not left as a half-migrated pnpm-flavored version) and .husky/pre-commit exists calling lint-staged",
+                ".husky/commit-msg exists and calls commitlint, not d2-style",
+                "the lint-commits CI job is left untouched",
+                "the reusable lint.yml@v1 CI job is gone and lint runs as an inline pnpm step",
+                "any @dhis2-ui/* or @dhis2/ui-forms imports found under src/ were updated to import from @dhis2/ui",
+                "pnpm install completes without unresolved dependency errors",
+                "eslint runs with no config-resolution errors",
+                ".stylelintrc.* no longer proxies cli-style and imports @dhis2/config-stylelint instead",
+                ".ls-lint.yml is migrated to @dhis2/config-lslint's base, with this app's custom per-extension casing rules preserved",
+                "stylelint and @ls-lint/ls-lint were added as real devDependencies, not just their @dhis2/config-* packages",
+                "@dhis2/ui was bumped to the latest version within its current major (was ^10.16.1)"
+            ]
+        }
+    ]
+}
