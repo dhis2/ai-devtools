@@ -94,7 +94,7 @@
             "id": 5,
             "name": "style-configs-aggregate-data-entry-app",
             "prompt": "Can you move this app off @dhis2/cli-style onto our shared configs? Same as the other apps.",
-            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on @dhis2/cli-style (`lint: d2-style check`, `@dhis2/cli-style: ^10.7.9`), with `.hooks/pre-commit` calling `d2-style check --staged` AND `.hooks/commit-msg` calling `d2-style check commit` directly (not just delegating to CI) -- this is the harder case the route-manager-app fixture doesn't cover, since the commit-msg hook needs a real commitlint replacement, not just deletion, per Step 9. This fixture ALSO has a real `.stylelintrc.js` (proxying `@dhis2/cli-style`'s `config.stylelint`) and a real, customized `.ls-lint.yml` (per-extension casing rules, not just the generic base `.dir: kebab-case`) -- the agent needs to notice both are configured, migrate them to @dhis2/config-stylelint/@dhis2/config-lslint, add `stylelint`/`@ls-lint/ls-lint` as real devDependencies (cli-style bundled its own copies of both, so the app never had them directly), and preserve the custom ls-lint rules rather than blowing them away with a blind copy of the generic shared base file. Also has a separate lint-commits CI job (unrelated, should stay untouched), a lint: uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1 job (should be folded into an inline step), and `@dhis2/ui` at `^10.16.1` that should get a non-breaking bump.",
+            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on @dhis2/cli-style (`lint: d2-style check`, `@dhis2/cli-style: ^10.7.9`), with `.hooks/pre-commit` calling `d2-style check --staged` AND `.hooks/commit-msg` calling `d2-style check commit` directly (not just delegating to CI) -- this is the harder case the route-manager-app fixture doesn't cover, since the commit-msg hook needs a real commitlint replacement, not just deletion, per Step 9. This fixture ALSO has a real `.stylelintrc.js` (proxying `@dhis2/cli-style`'s `config.stylelint`) and a real, customized `.ls-lint.yml` (per-extension casing rules, not just the generic base `.dir: kebab-case`) -- the agent needs to notice both are configured, migrate them to @dhis2/config-stylelint/@dhis2/config-lslint, add `stylelint`/`@ls-lint/ls-lint` as real devDependencies (cli-style bundled its own copies of both, so the app never had them directly), and preserve the custom ls-lint rules rather than blowing them away with a blind copy of the generic shared base file. Also has a `lint-commits`/`lint-pr-title` pair pointed at `dhis2/workflows-platform`'s reusable workflows -- these are NOT unrelated to this migration despite the name, since both resolve their commitlint config via `require('@dhis2/cli-style').config.commitlint)` internally and will break once cli-style is removed; they need a custom commitlint step instead. Also has a `lint: uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1` job (should be folded into an inline step, it runs `d2-style check` internally too), and `@dhis2/ui` at `^10.16.1` that should get a non-breaking bump.",
             "files": ["fixtures/real-aggregate-data-entry-app/"],
             "assertions": [
                 "@dhis2/cli-style is removed from package.json entirely",
@@ -104,7 +104,7 @@
                 "package.json's lint script no longer calls d2-style",
                 ".hooks/ is gone and .husky/pre-commit exists calling lint-staged",
                 ".husky/commit-msg exists and calls commitlint (not d2-style) since the original .hooks/commit-msg called d2-style check commit directly",
-                "the lint-commits CI job is left untouched (unrelated to this migration)",
+                "the lint-commits/lint-pr-title reusable workflow jobs are replaced with a commitlint-based step (both require @dhis2/cli-style internally and would otherwise break)",
                 "the separate reusable lint.yml@v1 CI job is gone and lint now runs as an inline step",
                 "eslint runs successfully against the app with no config-resolution errors",
                 ".stylelintrc.* no longer proxies cli-style and imports @dhis2/config-stylelint instead",
@@ -140,7 +140,7 @@
             "id": 7,
             "name": "combined-migration-aggregate-data-entry-app",
             "prompt": "Can you fully modernize this app? We want it moved over to pnpm and off @dhis2/cli-style onto our shared configs -- same as what we've been doing with our other apps.",
-            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on yarn AND @dhis2/cli-style, with real .hooks/pre-commit and .hooks/commit-msg (commit-msg calls d2-style check commit directly) -- the harder combined case, since the pnpm migration's hook step (swap yarn->pnpm in .hooks/*) and the style-configs migration's hook step (replace .hooks/ with .husky/ + lint-staged + commitlint) both touch the same two files. Also has a real `.stylelintrc.js` (proxying cli-style) and a customized `.ls-lint.yml` (per-extension casing rules) that both need migrating to @dhis2/config-stylelint/@dhis2/config-lslint, with stylelint/@ls-lint/ls-lint added as real devDependencies and the custom ls-lint rules preserved -- plus a non-breaking `@dhis2/ui` bump (currently ^10.16.1). Tests that the agent reconciles all of this into one final coherent state rather than doing a wasted intermediate pnpm-flavored edit to .hooks/ that then gets thrown away, or dropping the style-configs pieces because the request also mentioned pnpm.",
+            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app still on yarn AND @dhis2/cli-style, with real .hooks/pre-commit and .hooks/commit-msg (commit-msg calls d2-style check commit directly) -- the harder combined case, since the pnpm migration's hook step (swap yarn->pnpm in .hooks/*) and the style-configs migration's hook step (replace .hooks/ with .husky/ + lint-staged + commitlint) both touch the same two files. Also has a real `.stylelintrc.js` (proxying cli-style) and a customized `.ls-lint.yml` (per-extension casing rules) that both need migrating to @dhis2/config-stylelint/@dhis2/config-lslint, with stylelint/@ls-lint/ls-lint added as real devDependencies and the custom ls-lint rules preserved. Also has a `lint-commits`/`lint-pr-title` pair pointed at dhis2/workflows-platform's reusable workflows, which resolve their commitlint config via `require('@dhis2/cli-style').config.commitlint)` internally and will break once cli-style is removed -- needs a custom commitlint step instead, not just repointing to @pnpm (the @pnpm branch has the same cli-style dependency) -- plus a non-breaking `@dhis2/ui` bump (currently ^10.16.1). Tests that the agent reconciles all of this into one final coherent state rather than doing a wasted intermediate pnpm-flavored edit to .hooks/ that then gets thrown away, or dropping the style-configs pieces because the request also mentioned pnpm.",
             "files": ["fixtures/real-aggregate-data-entry-app/"],
             "assertions": [
                 "yarn.lock is gone and pnpm-lock.yaml exists",
@@ -153,7 +153,7 @@
                 "the old .eslintrc.js/.prettierrc.js are gone",
                 ".hooks/ is gone (not left as a half-migrated pnpm-flavored version) and .husky/pre-commit exists calling lint-staged",
                 ".husky/commit-msg exists and calls commitlint, not d2-style",
-                "the lint-commits CI job is left untouched",
+                "the lint-commits/lint-pr-title reusable workflow jobs are replaced with a commitlint-based step (both require @dhis2/cli-style internally and would otherwise break)",
                 "the reusable lint.yml@v1 CI job is gone and lint runs as an inline pnpm step",
                 "any @dhis2-ui/* or @dhis2/ui-forms imports found under src/ were updated to import from @dhis2/ui",
                 "pnpm install completes without unresolved dependency errors",
@@ -162,6 +162,32 @@
                 ".ls-lint.yml is migrated to @dhis2/config-lslint's base, with this app's custom per-extension casing rules preserved",
                 "stylelint and @ls-lint/ls-lint were added as real devDependencies, not just their @dhis2/config-* packages",
                 "@dhis2/ui was bumped to the latest version within its current major (was ^10.16.1)"
+            ]
+        },
+        {
+            "id": 8,
+            "name": "ci-migration-app-management-app",
+            "prompt": "Can you modernize this app's CI pipeline? Move it onto our shared GitHub Actions workflows wherever possible, and bump anything outdated.",
+            "expected_output": "A real snapshot of dhis2/app-management-app's CI as it was just before dhis2/app-management-app#554 (the real PR that did this exact migration) -- entirely bespoke workflows, none of them using dhis2/workflows-platform yet: comment-and-close.yml uses the third-party vardevs/candc@v1 action directly, dhis2-verify-app.yml hand-rolls build/lint/test/release jobs on actions/checkout@v2 + actions/setup-node@v1 + Node 16 + the unmaintained c-hive/gha-yarn-cache action, dhis2-verify-commits.yml hand-rolls PR-title and commit-message linting (also via ancient actions, also resolving its commitlint config through @dhis2/cli-style, which stays installed and in-scope here since this eval is CI-only), and dhis2-preview-pr.yml hand-rolls a Netlify PR-preview deploy. Needs: comment-and-close.yml, lint, lint-commits, test, release, and lint-pr-title all replaced with dhis2/workflows-platform reusable-workflow wrappers (composed the way #554 did -- e.g. one test-and-release.yml calling lint-commits.yml/lint.yml/test.yml/release.yml, a separate lint-pr-title.yml), the three old bespoke files deleted, and no outdated actions/checkout, actions/setup-node, Node version, or c-hive/gha-yarn-cache left in whatever custom step (if any) remains.",
+            "files": ["fixtures/real-app-management-app/"],
+            "assertions": [
+                "the old bespoke actions (c-hive/gha-yarn-cache, vardevs/candc, JulienKode/pull-request-name-linter-action, dhis2/action-semantic-release, dhis2/deploy-build, nwtgck/actions-netlify) are gone from every workflow, whether by deleting the file or rewriting it in place",
+                "comment-and-close.yml points at the reusable comment-and-close.yml workflow instead of vardevs/candc@v1",
+                "lint, lint-commits, test, release, and lint-pr-title are all composed from dhis2/workflows-platform reusable-workflow wrappers",
+                "no remaining custom step uses actions/checkout below v4, actions/setup-node below v4, a Node version below 20, or c-hive/gha-yarn-cache"
+            ]
+        },
+        {
+            "id": 9,
+            "name": "ci-migration-synthetic-app",
+            "prompt": "Can you modernize this app's CI pipeline? Move it onto our shared GitHub Actions workflows wherever possible, and bump anything outdated.",
+            "expected_output": "A synthetic (not-real) DHIS2 app, 'field-visit-tracker-app', whose repo does not exist on GitHub -- deliberately, so an agent with network access can't shortcut by finding a real repo that's already completed this exact migration and copying its answer (that's what happened with the real-app-management-app fixture once network access was allowed -- see iteration-5b's benchmark notes). Its .github/workflows/ content is the same genuinely-shared old-DHIS2-CI-template pattern real apps of that era used (comment-and-close.yml on vardevs/candc@v1, dhis2-verify-app.yml hand-rolling build/lint/test/release on actions/checkout@v2 + setup-node@v1 + Node 16 + c-hive/gha-yarn-cache, dhis2-verify-commits.yml resolving commitlint config through @dhis2/cli-style on ancient actions, dhis2-preview-pr.yml hand-rolling a Netlify PR preview) -- so the fix itself is identical to eval 8, but this fixture can't be 'solved' by fetching a real answer key, only by actually knowing (from the skill, or independently discovering) dhis2/workflows-platform's real reusable-workflow catalog. Use this fixture instead of/alongside real-app-management-app whenever comparing with-skill vs. baseline WITH network access enabled for both agents.",
+            "files": ["fixtures/synthetic-ci-app/"],
+            "assertions": [
+                "the old bespoke actions (c-hive/gha-yarn-cache, vardevs/candc, JulienKode/pull-request-name-linter-action, dhis2/action-semantic-release, dhis2/deploy-build, nwtgck/actions-netlify) are gone from every workflow, whether by deleting the file or rewriting it in place",
+                "comment-and-close.yml points at the reusable comment-and-close.yml workflow instead of vardevs/candc@v1",
+                "lint, lint-commits, test, release, and lint-pr-title are all composed from dhis2/workflows-platform reusable-workflow wrappers",
+                "no remaining custom step uses actions/checkout below v4, actions/setup-node below v4, a Node version below 20, or c-hive/gha-yarn-cache"
             ]
         }
     ]

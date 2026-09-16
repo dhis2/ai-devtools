@@ -298,32 +298,67 @@ The inline `yarn lint`/`pnpm lint` step should be whatever Step 7 landed on — 
 or ls-lint got folded into that script, CI picks them up automatically; don't add separate
 CI steps for them.
 
-`lint-commits` (commit message format) is a separate reusable workflow unrelated to
-`d2-style` — leave it as-is.
+**`lint-commits` is not unrelated to `cli-style` the way it looks.** Despite the name
+suggesting it only checks commit message format, `dhis2/workflows-platform`'s
+`lint-commits.yml` (and `lint-pr-title.yml`, if present) resolves its commitlint config via
+`require('@dhis2/cli-style').config.commitlint)` — it breaks with "Cannot find module
+'@dhis2/cli-style'" once this migration removes it (Step 10). Check whether the
+`pnpm-no-cli-style` branch exists yet (`gh api repos/dhis2/workflows-platform/branches --jq '.[].name'`)
+and point at that instead of `@v1`/`@pnpm` if so; otherwise replace it with a custom step
+using `@dhis2/config-commitlint` (Step 9) instead of leaving it pointed at the reusable
+workflow. See `references/ci-migration.md` Step 3 for the full writeup and the exact
+replacement YAML — this doc's job is just to flag it here since Step 10 is what triggers it.
 
-## Step 12: Bump `@dhis2/ui` to the latest non-breaking version
+## Step 12: Bump `@dhis2/ui`, `@dhis2/app-runtime`, and `@dhis2/d2-i18n`
 
-While touching the app's style/UI tooling, also bring `@dhis2/ui` up to date within its
-current major — a low-risk win that's easy to bundle into the same PR, but keep it a
-**non-breaking** bump: don't cross a major version here, that's a separate, riskier task the
-user didn't ask for.
+While touching the app's style/UI tooling, also bring these three platform libraries up to
+date — a low-risk win that's easy to bundle into the same PR. Check each one independently;
+they don't necessarily move majors at the same time:
 
 ```bash
-node -e "console.log(require('./package.json').dependencies['@dhis2/ui'])"   # current range
-npm view @dhis2/ui@<current-major> version   # e.g. npm view @dhis2/ui@9 version
+node -e "
+const p = require('./package.json')
+for (const n of ['@dhis2/ui', '@dhis2/app-runtime', '@dhis2/d2-i18n'])
+    console.log(n, p.dependencies?.[n] ?? p.devDependencies?.[n] ?? '(not present)')
+"
+npm view @dhis2/ui dist-tags
+npm view @dhis2/app-runtime dist-tags
+npm view @dhis2/d2-i18n dist-tags
 ```
 
-Update `package.json` to that version (keep the same range style the app already uses —
-`^`, `~`, or exact), then:
+For each library that's present, compare its current major against `latest`'s major:
+
+- **Same major → just bump to `latest`.** This is the common case and needs no further
+  decision — update `package.json` (keep whatever range style — `^`, `~`, exact — the app
+  already uses) and move on.
+- **Different major → this is a breaking bump, don't take it silently.** Ask the user which
+  they want:
+    - **Latest non-breaking** (the safer default if you can't ask — e.g. running
+      unattended): stay within the app's current major.
+        ```bash
+        npm view @dhis2/ui@<current-major> version   # e.g. npm view @dhis2/ui@9 version
+        ```
+    - **Latest overall**: take the major bump. This needs real verification, not just an
+      install — expect to fix actual breaking changes, not just lint noise. Check that
+      library's changelog/migration guide for the specific major(s) being crossed before
+      starting, and budget real time for it; don't bundle this silently into what's
+      otherwise a low-risk PR.
+      If you can't ask (no interactive user available) and choose the non-breaking default,
+      say so explicitly in the summary — don't just skip the library without mentioning that a
+      newer major exists.
+
+Whichever path for whichever library, finish with:
 
 ```bash
 pnpm install
-pnpm lint      # tsc/eslint will flag any prop or export that actually did change
+pnpm lint      # tsc/eslint will flag any prop, export, or i18n API that actually changed
 ```
 
-If anything breaks, that's a signal the release wasn't as non-breaking as its version number
-implied — check the `@dhis2/ui` changelog for the affected component before working around
-it, don't just silence the error.
+If a same-major bump breaks anything, that's a signal the release wasn't as non-breaking as
+its version number implied — check that library's changelog for the affected
+component/export before working around it, don't just silence the error. If a cross-major
+bump breaks something, that's expected — fix it for real using the migration guide, don't
+revert to avoid the work unless the user explicitly wants to defer it.
 
 ## Step 13: Verify
 
@@ -340,13 +375,13 @@ vice versa). Fix real issues; don't disable rules just to make the diff smaller.
 
 ## Troubleshooting
 
-| Symptom                                                                         | Fix                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `eslint` errors "Cannot find config @dhis2/config-eslint"                       | It wasn't installed, or `.eslintrc.js` (old-style config) still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one.                                                                         |
-| A rule the app relied on is missing after switching                             | Check if `@dhis2/config-eslint/react` (not the base export) covers it before adding a manual override — see Step 3.                                                                                                                                       |
-| `prettier -c .` fails on `pnpm-lock.yaml` or another generated file             | Add it to `.prettierignore` — lockfiles and build output shouldn't be formatted.                                                                                                                                                                          |
-| `stylelint` errors "Cannot find module 'stylelint-use-logical'"                 | A dual-package-hazard/phantom-dependency issue, not a missing install — confirm you're consuming a real published/packed install of `@dhis2/config-stylelint`, not a `pnpm link:`'d local checkout; a real install resolves its bundled plugin correctly. |
-| `ls-lint` reports violations that weren't there before                          | `@dhis2/config-lslint`'s ruleset isn't guaranteed identical to the app's old customized `.ls-lint.yml` — see the note in Step 6 about preserving project-specific overrides.                                                                              |
-| CI still fails after removing the reusable `lint.yml@v1` job                    | Confirm the new inline `yarn lint`/`pnpm lint` step was actually added to the remaining job — it's easy to drop the job without replacing the step.                                                                                                       |
-| `npm view @dhis2/config-commitlint@alpha` (or any `@dhis2/config-*@alpha`) 404s | The `style-configs` prerelease hasn't published yet, or `alpha` has since been promoted to `latest` — check `npm view @dhis2/config-commitlint dist-tags` and use whichever tag/version actually resolves.                                                |
-| `@dhis2/ui` bump surfaces new TypeScript/ESLint errors                          | The release wasn't purely non-breaking for a prop/export the app uses — check that component's changelog entry rather than suppressing the error; consider pinning back a version if it's a real regression.                                              |
+| Symptom                                                                         | Fix                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslint` errors "Cannot find config @dhis2/config-eslint"                       | It wasn't installed, or `.eslintrc.js` (old-style config) still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one.                                                                                                                                                         |
+| A rule the app relied on is missing after switching                             | Check if `@dhis2/config-eslint/react` (not the base export) covers it before adding a manual override — see Step 3.                                                                                                                                                                                                                       |
+| `prettier -c .` fails on `pnpm-lock.yaml` or another generated file             | Add it to `.prettierignore` — lockfiles and build output shouldn't be formatted.                                                                                                                                                                                                                                                          |
+| `stylelint` errors "Cannot find module 'stylelint-use-logical'"                 | A dual-package-hazard/phantom-dependency issue, not a missing install — confirm you're consuming a real published/packed install of `@dhis2/config-stylelint`, not a `pnpm link:`'d local checkout; a real install resolves its bundled plugin correctly.                                                                                 |
+| `ls-lint` reports violations that weren't there before                          | `@dhis2/config-lslint`'s ruleset isn't guaranteed identical to the app's old customized `.ls-lint.yml` — see the note in Step 6 about preserving project-specific overrides.                                                                                                                                                              |
+| CI still fails after removing the reusable `lint.yml@v1` job                    | Confirm the new inline `yarn lint`/`pnpm lint` step was actually added to the remaining job — it's easy to drop the job without replacing the step.                                                                                                                                                                                       |
+| `npm view @dhis2/config-commitlint@alpha` (or any `@dhis2/config-*@alpha`) 404s | The `style-configs` prerelease hasn't published yet, or `alpha` has since been promoted to `latest` — check `npm view @dhis2/config-commitlint dist-tags` and use whichever tag/version actually resolves.                                                                                                                                |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors  | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide. |

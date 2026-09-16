@@ -157,9 +157,64 @@ list — these won't be caught by the install/build/test cycle above:
 - Husky/git hooks (e.g. `.hooks/pre-commit`, `.hooks/commit-msg`) — replace `yarn <cmd>`
   with `pnpm <cmd>`.
 - Any `package.json` `scripts` entries that call `yarn` directly.
-- README/CONTRIBUTING docs referencing `yarn install`, `yarn start`, etc.
+- CONTRIBUTING docs referencing `yarn install`, `yarn start`, etc. The README itself gets a
+  fuller pass — see Step 8.
 
-## Step 8: Update CI
+## Step 8: Update the README
+
+While the package manager is already being touched, bring the README's own presentation up
+to date. Three independent changes — do whichever apply, don't force a section that isn't
+relevant:
+
+**Add a pnpm badge, keep every other badge as-is.** Don't replace or reorder existing badges
+(React version, codecov, etc.) — just add pnpm's alongside them, same as any other badge in
+that row:
+
+```markdown
+[![pnpm](https://img.shields.io/badge/maintained%20with-pnpm-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+```
+
+**Refresh the app description from the App Hub, if the app is published there.** Read
+`d2.config.js`'s `id` and `title` fields, then check if the app is listed at
+`https://apps.dhis2.org/api/v2/apps` (paginated, `?page=<n>&pageSize=25`, no working
+server-side search — fetch pages and match client-side). Match on `id` first (most
+reliable — `d2.config.js`'s `id` is the same UUID the App Hub uses), falling back to a fuzzy
+match on `title` only if `id` isn't set. **The App Hub display name doesn't always match the
+repo/title name** — `aggregate-data-entry-app`'s `d2.config.js` has `title: 'Data Entry'`,
+and it's genuinely listed under just "Data Entry" on the App Hub, not "Aggregate Data Entry".
+If you find a match, replace the paragraph(s) directly under the `#` title with the App Hub
+`description` field (it's already written in prose, often markdown-formatted — use it near
+verbatim, don't rewrite it). Keep everything else in the README untouched — operational notes
+specific to the repo (required authorities, setup caveats, links to diagrams, live-demo URLs)
+usually live below that description and aren't part of it. If the app isn't listed there (not
+every app is — some are core/bundled, some just aren't published), leave the description as
+whatever the README already has and don't fabricate one.
+
+**Rename "Available Scripts" to "Get Started" and make it concise.** The
+`pnpm create @dhis2/app` scaffold's default README has a verbose version of this section — a
+`### yarn start`-style subheading plus a full paragraph, repeated separately for each of
+`start`/`test`/`build`/`deploy`. Collapse that into one short block, and switch `yarn` to
+`pnpm` while doing it:
+
+````markdown
+## Get Started
+
+```sh
+pnpm install   # install dependencies
+pnpm start     # run the app locally
+pnpm test      # run tests
+pnpm build     # build for production
+pnpm deploy    # deploy the built app to a DHIS2 instance
+```
+````
+
+If the app has no "Available Scripts" section at all (common on older or heavily
+customized READMEs — real `aggregate-data-entry-app`'s README has none, just a badge, a
+title, a live-demo link, and app-specific docs), add a "Get Started" section rather than
+renaming anything; don't invent scripts the app doesn't actually have — check
+`package.json`'s `scripts` first.
+
+## Step 9: Update CI
 
 In `.github/workflows/*.yml`:
 
@@ -184,7 +239,7 @@ point this step becomes unnecessary:
 gh api repos/dhis2/workflows-platform/branches --jq '.[].name'
 ```
 
-## Step 9: Verify
+## Step 10: Verify
 
 Do a clean reinstall to catch anything masked by stale `node_modules` state, then re-run the
 app's usual checks:
@@ -199,11 +254,11 @@ pnpm start
 
 `pnpm start` here just confirms the dev server boots without crashing — start it, confirm it
 compiles and serves on its usual port, then stop it (Ctrl-C). That alone doesn't tell you
-whether the app actually works once someone logs in; see Step 10 for that.
+whether the app actually works once someone logs in; see Step 11 for that.
 
 Confirm `pnpm-lock.yaml` is present and tracked in git, and `yarn.lock` is gone.
 
-## Step 10: Sanity-check against a real server (optional)
+## Step 11: Sanity-check against a real server (optional)
 
 `pnpm build` and `pnpm test` don't start the app or talk to a real DHIS2 server, so they can
 miss runtime-only breakage — most commonly a dependency that yarn 1 was phantom-hoisting and
@@ -266,7 +321,7 @@ If it fails:
   and that `admin`/`district` (or whatever credentials were passed) are valid on that
   instance.
 - **Dev server never came up** — read the printed dev-server output; this is almost always a
-  build error that should have already surfaced in Step 9, not something new.
+  build error that should have already surfaced in Step 10, not something new.
 - **Shell never rendered, but login succeeded** — this is the case this step exists to catch.
   Look at the console-error preview in the summary for a "Cannot find module" / import
   resolution error — treat it the same as a build-time resolution error: add the missing
@@ -283,5 +338,6 @@ If it fails:
 | `pnpm install` succeeds but the app fails at build or runtime                               | Module resolution errors from missing hoists often don't surface until build/test/start — always run all three, not just install.                                                                                               |
 | ESLint or the bundler can't resolve a `@dhis2/*` import that used to work                   | Check `publicHoistPattern` in `pnpm-workspace.yaml` includes `@dhis2/*`, then reinstall.                                                                                                                                        |
 | pnpm prints "Ignored build scripts" warnings                                                | Expected for packages not in `onlyBuiltDependencies`. Only add a package there if the app actually needs its build/postinstall step.                                                                                            |
-| The Step 10 smoke-test script reports uncaught page errors or missing-module console errors | This is a runtime-only resolution error the build/test steps didn't catch — treat it like any other missing dependency (Step 3/Step 6): add it to `package.json` or `publicHoistPattern`, reinstall, and re-run the smoke-test. |
-| The Step 10 smoke-test script fails to log in                                               | Confirm the demo server URL is reachable and the credentials are valid for that instance before assuming the app is broken — this step depends on network access to a real server.                                              |
+| The Step 11 smoke-test script reports uncaught page errors or missing-module console errors | This is a runtime-only resolution error the build/test steps didn't catch — treat it like any other missing dependency (Step 3/Step 6): add it to `package.json` or `publicHoistPattern`, reinstall, and re-run the smoke-test. |
+| The Step 11 smoke-test script fails to log in                                               | Confirm the demo server URL is reachable and the credentials are valid for that instance before assuming the app is broken — this step depends on network access to a real server.                                              |
+| App Hub description not found even though the app is clearly published                      | The App Hub display name may not match the repo/`d2.config.js` title exactly — match on `d2.config.js`'s `id` (the App Hub UUID) first, and only fall back to fuzzy name matching. See Step 8.                                  |

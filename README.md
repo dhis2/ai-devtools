@@ -67,23 +67,31 @@ npx skills add dhis2/ai-devtools --skill dhis2-apps
 
 ## `@dhis2/skill-modernise-apps`
 
-An AI skill for bringing an existing DHIS2 app's tooling up to date. It covers two
-independent migrations — an app can need either, both, or neither:
+An AI skill for bringing an existing DHIS2 app's tooling up to date. It covers five things
+an app can need any combination of, or none:
 
 - **Yarn → pnpm.** Bumps `@dhis2/cli-app-scripts` to a pnpm-capable version, adds a
   `pnpm-workspace.yaml` with the hoist patterns `@dhis2/app-shell` needs, converts the
   lockfile, fixes the phantom-dependency imports that Yarn 1's flat hoisting used to paper
   over, and updates git hooks and CI to call `pnpm` instead of `yarn`.
-- **`@dhis2/cli-style` → shared configs.** Replaces the `d2-style` CLI with
-  `@dhis2/config-eslint`/`@dhis2/config-prettier`, a flat `eslint.config.mjs` and
-  `.prettierrc.mjs`, and migrates git hooks from the old `.hooks/` + `d2-style` setup to
-  native `husky`/`lint-staged` (with `commitlint` standing in for any commit-message check
-  that used to go through `d2-style`) — the same setup a freshly scaffolded app already uses
-  by default.
+- **`@dhis2/cli-style` → shared configs.** Replaces the `d2-style` CLI with the shared
+  `@dhis2/config-eslint`/`@dhis2/config-prettier`/`@dhis2/config-stylelint`/`@dhis2/config-lslint`/`@dhis2/config-commitlint`
+  packages (whichever tools the app already had configured) and migrates git hooks from the
+  old `.hooks/` + `d2-style` setup to native `husky`/`lint-staged` — the same setup a
+  freshly scaffolded app already uses by default.
+- **Platform library bumps.** Updates `@dhis2/ui`, `@dhis2/app-runtime`, and
+  `@dhis2/d2-i18n` — non-breaking (current major) by default for each, with an explicit
+  choice offered whenever `latest` would cross a major version.
+- **README refresh.** A pnpm badge alongside existing badges, an app description pulled from
+  the App Hub when the app is published there, and the scaffold's verbose "Available
+  Scripts" section collapsed into a concise "Get Started".
+- **CI modernisation.** Replaces bespoke GitHub Actions workflows with the shared
+  `dhis2/workflows-platform` reusable workflows wherever one exists, and bumps outdated
+  action versions and the Node version in whatever stays custom.
 
-Either migration ends with an install/build/lint pass to catch anything the change broke,
-plus an optional sanity check that starts the app against a real DHIS2 server and confirms
-the UI still renders after logging in.
+Each task ends with an install/build/lint pass to catch anything the change broke, plus an
+optional sanity check that starts the app against a real DHIS2 server and confirms the UI
+still renders after logging in.
 
 ### Install
 
