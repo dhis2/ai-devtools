@@ -37,6 +37,8 @@ importers:
 
   src/skills/example-skill: {}
 
+  src/skills/modernise-apps: {}
+
 packages:
 
   '@babel/code-frame@7.29.7':
