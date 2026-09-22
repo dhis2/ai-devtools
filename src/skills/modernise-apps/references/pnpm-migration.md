@@ -223,21 +223,9 @@ In `.github/workflows/*.yml`:
   `actions/setup-node` step (instead of `cache: yarn`).
 
 If the app consumes `dhis2/workflows-platform` reusable workflows (`uses: dhis2/workflows-platform/.github/workflows/...@<ref>`),
-point them at the `pnpm` branch instead of the default `@v1` tag — the same approach
-`aggregate-data-entry-app#481` used:
-
-```yaml
-uses: dhis2/workflows-platform/.github/workflows/test.yml@pnpm
-```
-
-pnpm support hasn't been merged into `@v1` yet as of this writing, so `@v1` workflows will
-still run `yarn install` internally and fail once `yarn.lock` is gone. Confirm the `pnpm`
-branch still exists before using it — it's expected to eventually merge into `@v1`, at which
-point this step becomes unnecessary:
-
-```bash
-gh api repos/dhis2/workflows-platform/branches --jq '.[].name'
-```
+point them at a pnpm-compatible ref instead of the yarn-only `@v1` default — which one
+depends on whether this app is also migrating off `@dhis2/cli-style`; see
+`references/ci-migration.md` Step 3 for the two cases and which ref fits each.
 
 ## Step 10: Verify
 

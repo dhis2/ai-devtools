@@ -189,6 +189,17 @@
                 "lint, lint-commits, test, release, and lint-pr-title are all composed from dhis2/workflows-platform reusable-workflow wrappers",
                 "no remaining custom step uses actions/checkout below v4, actions/setup-node below v4, a Node version below 20, or c-hive/gha-yarn-cache"
             ]
+        },
+        {
+            "id": 10,
+            "name": "multi-calendar-dates-bump-aggregate-data-entry-app",
+            "prompt": "Can you update @dhis2/multi-calendar-dates to the latest version in this app?",
+            "expected_output": "A real snapshot of dhis2/aggregate-data-entry-app on @dhis2/multi-calendar-dates ^2.1.2 -- the latest major (3.x, now published as latest) is a genuine breaking change (dhis2/multi-calendar-dates#102): getNowInCalendar now returns a plain { year, month, day, eraYear? } object instead of a Temporal.ZonedDateTime, dropping time-of-day entirely. This app's src/shared/date/get-now-in-calendar.js wraps it in getNowInCalendarString, whose stringifyDate helper reads .hour/.minute/.second off the result when `long: true` is passed (used by src/shared/date/date-utils.js and src/shared/locked-status/use-check-lock-status.js) -- naively bumping without fixing this produces garbled output like '2024-06-15Tundefined:undefined:undefined', not an error. The app's own pre-existing jest suite (src/shared/date/get-now-in-calendar.test.js) hard-asserts exact HH:MM:SS strings, including a timezone-correction case for Africa/Kigali (UTC+2) -- this is the actual acceptance test, verified for real against the live package: the correct fix (deriving time-of-day via Intl.DateTimeFormat with the timezone param, not a bare `new Date()` which would only give local time and silently drop the timezone correction) passes all 4 tests; the naive bump fails 3 of 4.",
+            "files": ["fixtures/real-aggregate-data-entry-app/"],
+            "assertions": [
+                "@dhis2/multi-calendar-dates is bumped to the 3.x line",
+                "src/shared/date/get-now-in-calendar.test.js still passes in full, including the Africa/Kigali timezone-correction case -- not just that eslint/tsc are silent"
+            ]
         }
     ]
 }

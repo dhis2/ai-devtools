@@ -84,60 +84,41 @@ Delete the bespoke workflow file(s) each wrapper replaces once the wrapper is in
 don't leave both around (the real `#554` migration deleted `dhis2-verify-app.yml`,
 `dhis2-verify-commits.yml`, and `dhis2-preview-pr.yml` entirely).
 
-## Step 3: Check `@v1` vs `@pnpm` and known `cli-style` coupling before adopting a job
+## Step 3: Pick the right ref for a pnpm app
 
-Not every reusable workflow is a drop-in replacement for every app — check both of these
-before wiring one in:
+The `@v1` refs above match `#554`'s real migration (a yarn-based, still-on-`cli-style` app at
+the time). If this app is still on yarn and still on `cli-style`, `@v1` is what you want too
+and there's nothing further to decide here. The two cases worth pausing on are pnpm apps:
 
-- **If this app is also migrating to pnpm** (`references/pnpm-migration.md`), every reusable
-  workflow's `@v1` tag runs `yarn install --frozen-lockfile` internally — point the `uses:`
-  ref at the `@pnpm` branch instead (`uses: dhis2/workflows-platform/.github/workflows/<name>.yml@pnpm`),
-  the same way `aggregate-data-entry-app#481` did. Confirm the branch still exists first
-  (`gh api repos/dhis2/workflows-platform/branches --jq '.[].name'`) — this is expected to
-  eventually merge into `@v1`.
-- **`lint.yml`, `lint-commits.yml`, and `lint-pr-title.yml` all internally require
-  `@dhis2/cli-style` to be installed in the app**, on both `@v1` and `@pnpm` — `lint.yml` runs
-  `d2-style check` directly, and the other two resolve their commitlint config via
-  `require('@dhis2/cli-style').config.commitlint`. If this app has migrated off `cli-style`
-  (`references/style-configs-migration.md`), all three break with "Cannot find module
-  '@dhis2/cli-style'" once adopted as-is. Don't adopt them for such an app as-is — check for a
-  fixed branch first, and fall back to a custom step if none exists yet:
+| App is on...                      | Use               | Why                                                                                                                                                                                               |
+| --------------------------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| pnpm, still on `@dhis2/cli-style` | the `pnpm` branch | pnpm-native, but `lint.yml`/`lint-commits.yml`/`lint-pr-title.yml` still resolve config through `cli-style` — the right fit if the app has done the pnpm migration but not the style-configs one. |
+| pnpm, off `@dhis2/cli-style`      | `@v2`             | pnpm-native, and those same three jobs resolve config via the app's own `commitlint.config.mjs`/`pnpm lint` script instead — no `cli-style` involved at all.                                      |
 
-    ```bash
-    gh api repos/dhis2/workflows-platform/branches --jq '.[].name'
-    ```
+If neither fits (e.g. this app needs a job those refs don't cover), fall back to a small
+custom step rather than adopting one that's wrong for it:
 
-    A `pnpm-no-cli-style` branch fixes all three (built on top of `@pnpm`: `lint.yml` runs the
-    app's own `pnpm lint` instead of `pnpm d2-style check`, and `lint-commits.yml`/
-    `lint-pr-title.yml` point commitlint straight at the app's own `commitlint.config.mjs`
-    instead of resolving through `cli-style`). If it exists, use it —
-    `uses: dhis2/workflows-platform/.github/workflows/<name>.yml@pnpm-no-cli-style` — the same
-    way the `@pnpm` branch itself gets used once confirmed to exist (this is expected to
-    eventually merge into `@pnpm`/`@v1`, at which point drop the special-cased ref). If it
-    doesn't show up in that branch list yet (not pushed, or a yarn-based app with no equivalent
-    branch), fall back to a small custom step:
+```yaml
+lint-commits:
+    runs-on: ubuntu-latest
+    steps:
+        - uses: actions/checkout@v4
+          with: { fetch-depth: 0 }
+        - uses: pnpm/action-setup@v4 # omit if the app is still on yarn
+        - uses: actions/setup-node@v4
+          with:
+              node-version: 20
+              cache: pnpm # or yarn
+        - run: pnpm install --frozen-lockfile
+        - uses: wagoid/commitlint-github-action@v5
+          with:
+              configFile: commitlint.config.mjs
+```
 
-    ```yaml
-    lint-commits:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v4
-              with: { fetch-depth: 0 }
-            - uses: pnpm/action-setup@v4 # omit if the app is still on yarn
-            - uses: actions/setup-node@v4
-              with:
-                  node-version: 20
-                  cache: pnpm # or yarn
-            - run: pnpm install --frozen-lockfile
-            - uses: wagoid/commitlint-github-action@v5
-              with:
-                  configFile: commitlint.config.mjs
-    ```
-
-    `lint.yml`'s job is moot anyway once `cli-style` is gone (whether via the fixed branch or a
-    custom step) — `references/style-configs-migration.md` Step 11 already folds linting into
-    an inline `pnpm lint`/`yarn lint` step in the `test` job rather than using a separate `lint`
-    job at all, reusable or not.
+`lint.yml`'s job is moot anyway once `cli-style` is gone (whether via a `cli-style`-independent
+ref or a custom step) — `references/style-configs-migration.md` Step 11 already folds linting
+into an inline `pnpm lint`/`yarn lint` step in the `test` job rather than using a separate
+`lint` job at all, reusable or not.
 
 ## Step 4: Bump remaining custom actions and the Node version
 
@@ -166,9 +147,9 @@ file not found" rather than a normal job failure, so don't just eyeball the YAML
 
 ## Troubleshooting
 
-| Symptom                                                                    | Fix                                                                                                                                                                                                                 |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| A reusable-workflow job fails with "Cannot find module '@dhis2/cli-style'" | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) depends on `cli-style` internally — see Step 3. Check for the `pnpm-no-cli-style` branch first; fall back to a custom step if it isn't available. |
-| `contains(fromJSON('[...]'), github.ref)` never matches the default branch | Check argument order (`contains(list, value)`, not `contains(value, list)`) and that every ref string is spelled `refs/heads/<branch>` in full — see `app-management-app#561`.                                      |
-| A workflow silently never runs                                             | The `uses:` reference is wrong (org/repo/path/ref) — GitHub doesn't surface this as a run failure, the workflow just never appears in the Actions tab. Double-check the exact path against `workflows-platform`.    |
-| `pnpm install --frozen-lockfile` fails inside a reusable workflow job      | The job is still pinned at `@v1` (yarn-based) rather than `@pnpm` — see Step 3.                                                                                                                                     |
+| Symptom                                                                    | Fix                                                                                                                                                                                                                      |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A reusable-workflow job fails with "Cannot find module '@dhis2/cli-style'" | The ref this job is pinned to (`@v1` and the `pnpm` branch, as of this writing) still resolves its config through `cli-style` internally — see Step 3's table for which ref to use instead, or the custom-step fallback. |
+| `contains(fromJSON('[...]'), github.ref)` never matches the default branch | Check argument order (`contains(list, value)`, not `contains(value, list)`) and that every ref string is spelled `refs/heads/<branch>` in full — see `app-management-app#561`.                                           |
+| A workflow silently never runs                                             | The `uses:` reference is wrong (org/repo/path/ref) — GitHub doesn't surface this as a run failure, the workflow just never appears in the Actions tab. Double-check the exact path against `workflows-platform`.         |
+| `yarn: command not found` (or similar) inside a reusable workflow job      | This job's ref is still yarn-based (`@v1`, as of this writing) but the app is on pnpm — pick a pnpm-native ref instead (`pnpm` branch or `@v2` depending on whether `cli-style` is also gone, see Step 3's table).       |
