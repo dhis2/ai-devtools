@@ -20,10 +20,8 @@ follow this doc directly for those. Fresh apps scaffolded via `pnpm create @dhis
 already use the eslint/prettier/commitlint setup by default — this migration brings an
 older app in line with what new apps already look like.
 
-All five `@dhis2/config-*` packages are still in prerelease, published under the `alpha`
-dist-tag (`npm view @dhis2/config-eslint dist-tags` shows the full set — they version in
-lockstep from the same `style-configs` repo). Use the `alpha` tag for all of them until
-they're promoted to `latest`; check dist-tags again if any install unexpectedly 404s.
+All five `@dhis2/config-*` packages are published to `latest` (`npm view @dhis2/config-eslint
+dist-tags` shows the full set; they version in lockstep from the same `style-configs` repo).
 
 ---
 
@@ -59,13 +57,16 @@ proxying has a working replacement. Removing it up front just means every interm
 runs against a broken lint setup for no benefit.
 
 ```bash
-npm view @dhis2/config-eslint dist-tags   # confirms the alpha tag + current version for all five
+npm view @dhis2/config-eslint dist-tags   # confirms the current version for all five
 ```
+
+Use whatever version that resolves to — don't pin to the literal `"latest"` tag in
+`package.json`, resolve it to a real version number first, same as any other dependency:
 
 ```json
 "devDependencies": {
-    "@dhis2/config-eslint": "alpha",
-    "@dhis2/config-prettier": "alpha",
+    "@dhis2/config-eslint": "^0.4.0",
+    "@dhis2/config-prettier": "^0.4.0",
     "@eslint/compat": "^2.0.0",
     "eslint": "^9",
     "prettier": "^3",
@@ -74,13 +75,14 @@ npm view @dhis2/config-eslint dist-tags   # confirms the alpha tag + current ver
 }
 ```
 
-Add these two conditionally, only if Step 1 found them configured:
+(`0.4.0` above is illustrative — use whatever `dist-tags` actually reported.) Add these two
+conditionally, only if Step 1 found them configured:
 
 ```json
 "devDependencies": {
-    "@dhis2/config-stylelint": "alpha",
+    "@dhis2/config-stylelint": "^0.4.0",
     "stylelint": "^16",
-    "@dhis2/config-lslint": "alpha",
+    "@dhis2/config-lslint": "^0.4.0",
     "@ls-lint/ls-lint": "^2"
 }
 ```
@@ -228,16 +230,19 @@ the local hook was providing faster, pre-push feedback than CI. Use the shared
 setup:
 
 ```bash
-npm view @dhis2/config-commitlint@alpha version   # check current alpha version
+npm view @dhis2/config-commitlint version
 npm view @commitlint/cli version
 ```
 
 ```json
 "devDependencies": {
     "@commitlint/cli": "^21.2.2",
-    "@dhis2/config-commitlint": "alpha"
+    "@dhis2/config-commitlint": "^0.4.0"
 }
 ```
+
+(again, `0.4.0` is illustrative — pin to whatever version the `npm view` command above actually
+reported, not the literal `"latest"` tag.)
 
 ```javascript
 // commitlint.config.mjs
@@ -320,12 +325,12 @@ vice versa). Fix real issues; don't disable rules just to make the diff smaller.
 
 ## Troubleshooting
 
-| Symptom                                                                         | Fix                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `eslint` errors "Cannot find config @dhis2/config-eslint"                       | It wasn't installed, or `.eslintrc.js` (old-style config) still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one.                                                                         |
-| A rule the app relied on is missing after switching                             | Check if `@dhis2/config-eslint/react` (not the base export) covers it before adding a manual override — see Step 3.                                                                                                                                       |
-| `prettier -c .` fails on `pnpm-lock.yaml` or another generated file             | Add it to `.prettierignore` — lockfiles and build output shouldn't be formatted.                                                                                                                                                                          |
-| `stylelint` errors "Cannot find module 'stylelint-use-logical'"                 | A dual-package-hazard/phantom-dependency issue, not a missing install — confirm you're consuming a real published/packed install of `@dhis2/config-stylelint`, not a `pnpm link:`'d local checkout; a real install resolves its bundled plugin correctly. |
-| `ls-lint` reports violations that weren't there before                          | `@dhis2/config-lslint`'s ruleset isn't guaranteed identical to the app's old customized `.ls-lint.yml` — see the note in Step 6 about preserving project-specific overrides.                                                                              |
-| CI still fails after removing the reusable `lint.yml@v1` job                    | Confirm the new inline `yarn lint`/`pnpm lint` step was actually added to the remaining job — it's easy to drop the job without replacing the step.                                                                                                       |
-| `npm view @dhis2/config-commitlint@alpha` (or any `@dhis2/config-*@alpha`) 404s | The `style-configs` prerelease hasn't published yet, or `alpha` has since been promoted to `latest` — check `npm view @dhis2/config-commitlint dist-tags` and use whichever tag/version actually resolves.                                                |
+| Symptom                                                                                                | Fix                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `eslint` errors "Cannot find config @dhis2/config-eslint"                                              | It wasn't installed, or `.eslintrc.js` (old-style config) still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one.                                                                         |
+| A rule the app relied on is missing after switching                                                    | Check if `@dhis2/config-eslint/react` (not the base export) covers it before adding a manual override — see Step 3.                                                                                                                                       |
+| `prettier -c .` fails on `pnpm-lock.yaml` or another generated file                                    | Add it to `.prettierignore` — lockfiles and build output shouldn't be formatted.                                                                                                                                                                          |
+| `stylelint` errors "Cannot find module 'stylelint-use-logical'"                                        | A dual-package-hazard/phantom-dependency issue, not a missing install — confirm you're consuming a real published/packed install of `@dhis2/config-stylelint`, not a `pnpm link:`'d local checkout; a real install resolves its bundled plugin correctly. |
+| `ls-lint` reports violations that weren't there before                                                 | `@dhis2/config-lslint`'s ruleset isn't guaranteed identical to the app's old customized `.ls-lint.yml` — see the note in Step 6 about preserving project-specific overrides.                                                                              |
+| CI still fails after removing the reusable `lint.yml@v1` job                                           | Confirm the new inline `yarn lint`/`pnpm lint` step was actually added to the remaining job — it's easy to drop the job without replacing the step.                                                                                                       |
+| `npm view @dhis2/config-commitlint` (or any `@dhis2/config-*`) resolves to an unexpectedly old version | Check `npm view @dhis2/config-commitlint dist-tags` and use whatever `latest` currently resolves to.                                                                                                                                                      |
