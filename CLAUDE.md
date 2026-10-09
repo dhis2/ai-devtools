@@ -1,6 +1,6 @@
 # ai-devtools
 
-A pnpm monorepo for publishing AI development tools under the `@dhis2` scope.
+A monorepo for publishing AI development tools under the `@dhis2` scope.
 
 ## Structure
 

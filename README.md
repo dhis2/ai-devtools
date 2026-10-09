@@ -67,8 +67,8 @@ npx skills add dhis2/ai-devtools --skill dhis2-apps
 
 ## `@dhis2/skill-modernise-apps`
 
-An AI skill for bringing an existing DHIS2 app's tooling up to date. It covers five things
-an app can need any combination of, or none:
+An AI skill for bringing an existing DHIS2 app's tooling up to date. It covers six things an
+app can need any combination of, or none:
 
 - **Yarn → pnpm.** Bumps `@dhis2/cli-app-scripts` to a pnpm-capable version, adds a
   `pnpm-workspace.yaml` with the hoist patterns `@dhis2/app-shell` needs, converts the
@@ -92,6 +92,11 @@ an app can need any combination of, or none:
 - **CI modernisation.** Replaces bespoke GitHub Actions workflows with the shared
   `dhis2/workflows-platform` reusable workflows wherever one exists, and bumps outdated
   action versions and the Node version in whatever stays custom.
+- **App Hub continuous delivery.** Wires the app to `dhis2/workflows-platform`'s shared
+  `release.yml` workflow so releases publish to apps.dhis2.org automatically on every
+  conventional-commit push, instead of the manual version-bump-and-draft-release flow —
+  offered when it's missing rather than added unprompted, since it needs an App Hub app ID
+  and API key from the user.
 
 Each task ends with an install/build/lint pass to catch anything the change broke, plus an
 optional sanity check that starts the app against a real DHIS2 server and confirms the UI

@@ -15,6 +15,9 @@ description: >
     context of an existing DHIS2 app. Also use it when the user wants to modernise an
     existing app's CI/GitHub Actions pipeline, move it onto the dhis2/workflows-platform
     reusable workflows, bump outdated GitHub Actions, or update the Node version used in CI.
+    Also use it when the user wants to set up continuous delivery to the DHIS2 App Hub,
+    automate publishing an app to apps.dhis2.org, or mentions App Hub release automation,
+    d2-app-scripts publish, semantic-release, or the App Hub API key/app ID.
     This skill is for modernising an already-existing app — for scaffolding a brand new app,
     use the dhis2-apps skill instead.
 ---
@@ -22,7 +25,7 @@ description: >
 # Modernising DHIS2 Apps
 
 You are helping a developer bring an existing DHIS2 app up to date. "Modernising" currently
-covers four independent tasks — an app can need any combination of them, or none:
+covers five independent tasks — an app can need any combination of them, or none:
 
 1. **Migrating the package manager** from Yarn (typically Yarn 1) to pnpm.
    `@dhis2/cli-app-scripts` has supported pnpm since `12.7.0`, and this skill captures the
@@ -44,18 +47,25 @@ covers four independent tasks — an app can need any combination of them, or no
 4. **Modernising the CI pipeline** — replacing bespoke GitHub Actions workflows with the
    shared `dhis2/workflows-platform` reusable workflows wherever one exists, and bumping any
    outdated action version or Node version left in whatever stays custom.
+5. **Setting up continuous delivery to the App Hub** — wiring the app to
+   `dhis2/workflows-platform`'s `release.yml` reusable workflow so releases publish to
+   apps.dhis2.org automatically on every conventional-commit push to the default branch,
+   instead of the manual per-release `yarn version` + draft-GitHub-Release flow. Needs an App
+   Hub app ID and API key from the user — **offer this task when it's missing rather than
+   adding it unprompted**, since it changes how releases happen going forward.
 
 ## First: confirm this is an existing DHIS2 app, and which task(s) apply
 
-| Check                                                                                     | How                                              | Result                                                                                             |
-| ----------------------------------------------------------------------------------------- | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                   | Glob + read `package.json`                       | **DHIS2 app** — continue                                                                           |
-| Neither found                                                                             | —                                                | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
-| `yarn.lock` exists and `pnpm-lock.yaml` does not                                          | `ls`                                             | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
-| `pnpm-lock.yaml` already exists                                                           | `ls`                                             | **Already migrated to pnpm** — nothing to do for that task                                         |
-| `@dhis2/cli-style` is in `package.json`                                                   | Read `package.json`                              | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n`/`multi-calendar-dates` is present and behind `latest` | Read `package.json` + `npm view <pkg> dist-tags` | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
-| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...` | Read `.github/workflows/*.yml`                   | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
+| Check                                                                                                  | How                                              | Result                                                                                             |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                | Glob + read `package.json`                       | **DHIS2 app** — continue                                                                           |
+| Neither found                                                                                          | —                                                | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
+| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                       | `ls`                                             | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
+| `pnpm-lock.yaml` already exists                                                                        | `ls`                                             | **Already migrated to pnpm** — nothing to do for that task                                         |
+| `@dhis2/cli-style` is in `package.json`                                                                | Read `package.json`                              | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n`/`multi-calendar-dates` is present and behind `latest`              | Read `package.json` + `npm view <pkg> dist-tags` | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
+| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`              | Read `.github/workflows/*.yml`                   | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
+| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'` | Read `.github/workflows/*.yml` + `d2.config.js`  | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)   |
 
 ## What does the user need?
 
@@ -68,6 +78,7 @@ covers four independent tasks — an app can need any combination of them, or no
 | Bump `@dhis2/ui`/`@dhis2/app-runtime`/`@dhis2/d2-i18n` to the latest version                          | `references/platform-library-bumps.md` (Step 1) |
 | Bump `@dhis2/multi-calendar-dates` to the latest version                                              | `references/platform-library-bumps.md` (Step 2) |
 | Modernise CI: adopt `dhis2/workflows-platform` reusable workflows, bump outdated actions/Node version | `references/ci-migration.md`                    |
+| Set up continuous delivery to the App Hub                                                             | `references/apphub-release.md`                  |
 
 More modernisation tasks (dependency upgrades, router migrations, etc.) may be added here
 in the future — this table is deliberately structured to grow.
@@ -134,6 +145,18 @@ in the future — this table is deliberately structured to grow.
   `aggregate-data-entry-app`'s `title` is `Data Entry`, listed on the App Hub as just "Data
   Entry"), but `id` is the same UUID on both sides. Don't fabricate a description if the app
   genuinely isn't listed there.
+- **Offer App Hub CD setup when it's missing, don't add it unprompted** — unlike the other
+  four tasks, this one changes how releases happen going forward (automatic, on every
+  conventional-commit push to the default branch) and needs two things only the user can
+  provide: the App Hub app ID (ask for it directly) and a `DHIS2_BOT_APPHUB_TOKEN` API key
+  (**never ask the user for the token value itself — ask them to add the secret in GitHub
+  themselves, then confirm it exists via `gh secret list`, which never exposes the value**).
+  Never invent or guess either. See `references/apphub-release.md`.
+- **Use the shared `release.yml` reusable workflow for App Hub delivery, not the bespoke
+  `apphub-release.yml` + `d2-app-scripts publish` workflow from the public App Hub guide.**
+  The shared workflow already exists or is used across the platform and drives versioning
+  from conventional commits via `dhis2/action-semantic-release`, rather than a manual
+  `yarn version --patch` per release. See `references/apphub-release.md`.
 
 ## Troubleshooting
 
@@ -147,3 +170,4 @@ in the future — this table is deliberately structured to grow.
 | A `dhis2/workflows-platform` job fails with "Cannot find module '@dhis2/cli-style'"              | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) requires `cli-style`. See `references/ci-migration.md` Step 3.                                                                                                                               |
 | A CI workflow silently never runs after switching to a reusable workflow                         | The `uses:` reference (org/repo/path/ref) is wrong — GitHub doesn't report this as a failure, the workflow just never appears in the Actions tab. See `references/ci-migration.md`.                                                                            |
 | A date/time string looks subtly wrong (not an error) after bumping `@dhis2/multi-calendar-dates` | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them. See `references/platform-library-bumps.md` Step 2.                                                                                   |
+| App Hub release job fails with `EMISSINGAPPHUBID`/`EMISSINGMINDHIS2VERSION`/`EMISSINGTOKEN`      | `d2.config.js`'s `id`/`minDHIS2Version` or the `DHIS2_BOT_APPHUB_TOKEN` secret is missing, or the release job wasn't given `secrets: inherit`. See `references/apphub-release.md` Steps 2, 4-5.                                                                |
