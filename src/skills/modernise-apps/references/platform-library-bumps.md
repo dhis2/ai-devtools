@@ -140,25 +140,74 @@ this is the part that got rewritten most substantially, so it's the highest-risk
 subtle regression, and it's exactly the kind of calendar a period-calculation helper or
 `useDatePicker` could be driving just as easily as `getNowInCalendar`).
 
+#### If `ethiopian` fails before you've bumped anything (Node 24 / CLDR 48)
+
+On newer Node (anything after 20.19 — e.g. Node 24, which ships CLDR 48), the `ethiopian`
+calendar can throw `RangeError: Era am (ISO year 2016) was not matched by any era` against
+the **currently-installed** `2.x` — so the baseline can't be captured at all. This is an
+unrelated upstream bug, not something the bump caused: CLDR 48 changed the Ethiopic era codes
+`Intl` reports (to `am`/`aa`), and the `@js-temporal/polyfill@0.4.3` that `2.x` depends on
+doesn't recognise them
+([`js-temporal/temporal-polyfill#357`](https://github.com/js-temporal/temporal-polyfill/pull/357)).
+**`3.x` doesn't have this problem** — it vendors the polyfill's calendar code with the era fix
+applied — so this only blocks the _before_ run. Confirm the cause first:
+
+```bash
+# resolves the polyfill copy multi-calendar-dates actually uses (it isn't a direct app dependency)
+node -p "const {Temporal}=require(require.resolve('@js-temporal/polyfill',{paths:[require.resolve('@dhis2/multi-calendar-dates')]})); Temporal.PlainDate.from('2024-06-15').withCalendar('ethiopic').eraYear"
+```
+
+To capture the baseline, temporarily patch the polyfill: `pnpm patch @js-temporal/polyfill@0.4.3`
+(confirm the version with `pnpm why @js-temporal/polyfill`), and in the directory it prints
+edit **both** `dist/index.cjs` (what jest loads) and `dist/index.esm.js` (what bundlers load).
+#357's diff doesn't apply to `0.4.x` as-is — eras here are named `era0`/`era1`, with no alias
+list — so add a `reviseIntlEra` to `EthiopicHelper` that maps the new codes onto them, right
+after its constructor (the built code is minified, so search for this exact string):
+
+```diff
+ super("ethiopic",[{name:"era0",isoEpoch:{year:-5492,month:7,day:17}},{name:"era1",isoEpoch:{year:8,month:8,day:27},anchorEpoch:{year:5501}}])}
++reviseIntlEra(e){let{era:t,eraYear:r}=e;return"am"===t&&(t="era1"),"aa"===t&&(t="era0"),{era:t,eraYear:r}}
+```
+
+Then `pnpm patch-commit <dir>` and re-run the one-liner above — it should print `2016`. (On
+yarn, use `patch-package` for the same edit.) Capture the baseline with the patch in place.
+
+**Remove the patch as part of the bump** — delete the `patches/` file and its
+`patchedDependencies` entry when moving to `3.x`, since `3.x` no longer uses the polyfill's
+Ethiopic era handling. Don't leave it behind; it's a baseline aid, not part of the migration.
+
 **If the app already has a test runner** (jest/vitest — check for an existing
 `*.test.ts`/`*.test.js` alongside the file that calls these functions, or a
-`jest.config.js`/`vitest.config.ts`), add real, committed tests, following whatever
-conventions already exist there (e.g. `jest.useFakeTimers()` + `jest.setSystemTime()` to pin
-"now" for date-dependent functions like `getNowInCalendar`, since its output changes daily
-otherwise):
+`jest.config.js`/`vitest.config.ts`), add real, committed **snapshot tests**, following
+whatever conventions already exist there. Use `toMatchSnapshot()` rather than hand-writing
+expected values — the snapshot taken against the currently-installed version _is_ the
+baseline, so there's no guessing or copy-pasting of "before" values, and it captures the full
+output shape (every field of a period object, every cell of a date-picker grid) rather than
+only the fields you thought to assert on. Pin "now" for date-dependent functions like
+`getNowInCalendar` (e.g. `jest.useFakeTimers()` + `jest.setSystemTime()`), otherwise the
+snapshot changes daily:
 
 ```javascript
 // Testing a wrapper around getNowInCalendar directly -- not through a UI component
+beforeAll(() => {
+    jest.useFakeTimers()
+    jest.setSystemTime(new Date('2024-06-15T10:30:00Z'))
+})
+afterAll(() => jest.useRealTimers())
+
 describe.each(['gregory', 'ethiopian', 'nepali'])('%s calendar', (calendar) => {
     it('returns the expected date', () => {
-        // pin the system time first -- see jest.useFakeTimers() above
-        expect(getNowInCalendarString({ calendar })).toBe(/* value captured before bumping */)
+        expect(getNowInCalendarString({ calendar })).toMatchSnapshot()
     })
 
     it('finds the expected adjacent period', () => {
-        const period = getFixedPeriodByDate({ periodType: 'Monthly', date: /* fixed date */, calendar })
+        const period = getFixedPeriodByDate({
+            periodType: 'Monthly',
+            date: '2024-06-15',
+            calendar,
+        })
         const [next] = getAdjacentFixedPeriods({ period, calendar, steps: 1 })
-        expect(next).toEqual(/* value captured before bumping */)
+        expect(next).toMatchSnapshot()
     })
 })
 ```
@@ -181,16 +230,34 @@ describe.each(['gregory', 'ethiopian', 'nepali'])('%s calendar', (calendar) => {
                 onDateSelect: () => {},
             })
         )
-        expect(result.current.calendarWeekDays).toEqual(/* value captured before bumping */)
+        expect(result.current.calendarWeekDays).toMatchSnapshot()
     })
 })
 ```
 
-Run this test _before_ bumping the dependency to confirm it passes against the
-currently-installed version — that's what makes it a real baseline, not a guess. Then bump,
-reinstall, and run the identical test again, unmodified. Keep it in the codebase
-afterward — it's real regression coverage for this library going forward, not a throwaway
-migration check.
+**Snapshot what the app actually consumes, not raw `getNowInCalendar` return values.**
+`getNowInCalendar`'s return type changes by design in `3.x` (Temporal object → plain object),
+so a snapshot of the raw value is guaranteed to differ and tells you nothing. Snapshot the
+app's own wrapper output (like `getNowInCalendarString` above) or the fields the app reads —
+that's where a real regression would show up.
+
+The workflow:
+
+1. **Before bumping**, run the tests against the currently-installed version. The first run
+   writes the `__snapshots__/*.snap` files — open them and sanity-check the values look
+   right (it's a baseline, not proof of correctness). Commit the tests and snapshots on their
+   own, before the bump, so the bump's diff is cleanly separate.
+2. **Bump**, reinstall, and run the identical tests again, unmodified, with `--ci`
+   (`pnpm test --ci`, or `jest --ci`) — in CI mode jest fails on a mismatch, and on a missing
+   snapshot, instead of silently writing a new one.
+3. **If a snapshot fails, don't update it (`-u`) to make it pass** — the diff _is_ the
+   finding. Investigate each changed value: either it's a real regression to fix in the app
+   code, or it's an expected change (confirm against `#102`/the changelog) and only then
+   update that one snapshot deliberately, saying why in the commit message.
+
+Keep the tests and snapshots in the codebase afterward — they're real regression coverage
+for this library going forward, not a throwaway migration check. (Vitest supports the same
+`toMatchSnapshot()` API, and fails on mismatch when run under `CI=true`.)
 
 **If there's no test runner set up at all**, don't introduce one just for this — that's a
 bigger decision than a dependency bump warrants. Instead, do the same before/after
@@ -274,6 +341,7 @@ safe.
 | `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors                                                                | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide. |
 | A date/time string looks subtly wrong after bumping `@dhis2/multi-calendar-dates` (e.g. `T undefined:undefined:undefined`) but nothing errors | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them — see Step 2. This won't throw, so check output values, not just exit codes.                                                                                                                                     |
 | A timezone-corrected time string is wrong (e.g. off by the timezone offset) after re-deriving time-of-day                                     | The fix used `new Date()` (browser/system local time) instead of an `Intl.DateTimeFormat`-based lookup for the specific `timezone` the call site was passed — see the code sample in Step 2.                                                                                                                                              |
+| `RangeError: Era am (ISO year ...) was not matched by any era` on the `ethiopian` calendar while capturing the baseline                       | Unrelated `@js-temporal/polyfill@0.4.3` bug with CLDR 48's new Ethiopic era codes on newer Node — temporarily patch the polyfill to capture the baseline, then remove the patch with the bump (`3.x` vendors the fix). See "If `ethiopian` fails before you've bumped anything" in Step 2.                                                |
 | The before/after regression test fails on the `nepali` calendar specifically, but `gregory`/`ethiopian` pass                                  | Expected to be the highest-risk case — `#102` rewrote Nepali support from scratch (it's the one calendar this library implements itself rather than delegating to CLDR). Don't assume it's a test bug; diff the actual before/after values and check the library's own changelog/tests for that release before concluding it's safe.      |
 | No test runner is set up and it's unclear whether to add one just for this                                                                    | Don't — that's a bigger decision than a dependency bump warrants. Use the standalone verify script instead, and delete it once the bump is confirmed safe.                                                                                                                                                                                |
 | Unsure whether `useDatePicker` is in scope for this app's regression test, since the app also uses `@dhis2/ui`'s `Calendar`/`DatePicker`      | Check the import, not the visible UI — `import { useDatePicker } from '@dhis2/multi-calendar-dates'` is in scope (direct usage of the version this app controls); `@dhis2/ui`'s bundled `Calendar`/`DatePicker` components are not (they resolve their own separate internal copy).                                                       |
