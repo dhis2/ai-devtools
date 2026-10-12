@@ -102,9 +102,9 @@ Don't proceed to Step 5/6 until this confirms as set.
 ## Step 5: Wire the reusable release workflow
 
 Add (or extend an existing combined workflow file with) a `release` job pointed at the ref
-this app already uses for other `dhis2/workflows-platform` jobs (see
-`references/ci-migration.md` Step 3 for picking `@v1`/`pnpm`/`@v2`) — gated on lint/test
-passing, and on the default branch only:
+this app already uses for other `dhis2/workflows-platform` jobs — `@v2` below, but see
+`references/ci-migration.md` Step 3 for when it should be the `pnpm` branch or `@v1` instead —
+gated on lint/test passing, and on the default branch only:
 
 ```yaml
 # .github/workflows/release.yml (or folded into an existing combined workflow)

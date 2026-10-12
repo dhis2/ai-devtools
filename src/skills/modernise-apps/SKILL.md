@@ -94,10 +94,11 @@ in the future — this table is deliberately structured to grow.
   incomplete just because `pnpm install` succeeded — module resolution errors often only
   surface at build or test time.
 - **`dhis2/workflows-platform`'s reusable workflow refs are not interchangeable — pick the
-  one that matches this app's pnpm _and_ `cli-style` status, not just `@v1` by default.**
-  `@v1` is yarn-only and `lint`/`lint-commits`/`lint-pr-title` require `@dhis2/cli-style`;
-  the `pnpm` branch is pnpm-native but those same jobs still require `cli-style`; `@v2` is
-  pnpm-native and drops that requirement. See `references/ci-migration.md` Step 3.
+  one that matches this app's pnpm _and_ `cli-style` status.** `@v2` (the default) is
+  pnpm-native and its `lint`/`lint-commits`/`lint-pr-title` jobs don't need
+  `@dhis2/cli-style`; the `pnpm` branch is pnpm-native for an app that keeps `cli-style`;
+  `@v1` is yarn-only and those jobs require `cli-style`. See `references/ci-migration.md`
+  Step 3.
 - **The Step 11 sanity e2e check (`references/pnpm-migration.md`) is optional and opt-in.**
   Only run it if the user asks for extra confidence before deploying, or explicitly requests
   it — never run it automatically as part of a routine migration. It needs outbound network
@@ -167,7 +168,7 @@ in the future — this table is deliberately structured to grow.
 | pnpm warns about ignored build scripts for a dependency                                          | Add the package to `onlyBuiltDependencies` (to allow it) or `ignoredBuiltDependencies` (to silence it) in `pnpm-workspace.yaml`, depending on whether the app actually needs that build step.                                                                  |
 | ESLint errors "Cannot find config @dhis2/config-eslint" after moving off `d2-style`              | Either it wasn't installed, or the old `.eslintrc.js` still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one. See `references/style-configs-migration.md`.                                     |
 | `stylelint`/`ls-lint` fails after moving off `d2-style`                                          | The app never had `stylelint`/`@ls-lint/ls-lint` as a direct dependency before — `cli-style` bundled and ran its own copies. Add the real tool as a devDependency, not just its `@dhis2/config-*` package. See `references/style-configs-migration.md` Step 2. |
-| A `dhis2/workflows-platform` job fails with "Cannot find module '@dhis2/cli-style'"              | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) requires `cli-style`. See `references/ci-migration.md` Step 3.                                                                                                                               |
+| A `dhis2/workflows-platform` job fails with "Cannot find module '@dhis2/cli-style'"              | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) is on `@v1` or the `pnpm` branch, which require `cli-style` — move it to `@v2`. See `references/ci-migration.md` Step 3.                                                                     |
 | A CI workflow silently never runs after switching to a reusable workflow                         | The `uses:` reference (org/repo/path/ref) is wrong — GitHub doesn't report this as a failure, the workflow just never appears in the Actions tab. See `references/ci-migration.md`.                                                                            |
 | A date/time string looks subtly wrong (not an error) after bumping `@dhis2/multi-calendar-dates` | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them. See `references/platform-library-bumps.md` Step 2.                                                                                   |
 | App Hub release job fails with `EMISSINGAPPHUBID`/`EMISSINGMINDHIS2VERSION`/`EMISSINGTOKEN`      | `d2.config.js`'s `id`/`minDHIS2Version` or the `DHIS2_BOT_APPHUB_TOKEN` secret is missing, or the release job wasn't given `secrets: inherit`. See `references/apphub-release.md` Steps 2, 4-5.                                                                |

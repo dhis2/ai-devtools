@@ -218,7 +218,7 @@ echo 'yarn lint-staged' > .husky/pre-commit
 ## Step 9: Replace commit-msg linting with `@dhis2/config-commitlint`
 
 **If `.hooks/commit-msg` (or `.husky/commit-msg`) just delegates to a CI job** (e.g. the repo
-also has `lint-commits: uses: dhis2/workflows-platform/.github/workflows/lint-commits.yml@v1`)
+also has `lint-commits: uses: dhis2/workflows-platform/.github/workflows/lint-commits.yml@v2`)
 and doesn't run its own linter, it's fine to drop the local hook entirely — CI still catches
 bad commit messages, just later.
 
@@ -277,10 +277,17 @@ rather than repeating that oversight).
 
 ## Step 11: Update CI
 
-If `.github/workflows/*.yml` uses a separate reusable `lint` job
-(`uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1`) — that reusable workflow
-is built around `d2-style` and won't work once it's gone. Fold linting into the existing
-test job instead, the same way `route-manager-app#35` did:
+**If the app is on pnpm** (or is being migrated to it alongside this), point every
+`dhis2/workflows-platform` job at `@v2` (moving it off the `pnpm` branch, if that's where it
+was) and you're done here — `@v2`'s `lint.yml` just runs
+the app's `pnpm lint` script (whatever Step 7 landed on), and its `lint-commits.yml`/
+`lint-pr-title.yml` pick up the `commitlint.config.mjs` from Step 9. None of them need
+`cli-style`. See `references/ci-migration.md` Step 3.
+
+**If the app is staying on yarn**, it's stuck on `@v1`, whose reusable `lint` job
+(`uses: dhis2/workflows-platform/.github/workflows/lint.yml@v1`) is built around `d2-style`
+and won't work once it's gone. Fold linting into the existing test job instead, the same way
+`route-manager-app#35` did:
 
 ```diff
   jobs:
@@ -299,16 +306,16 @@ test job instead, the same way `route-manager-app#35` did:
               - run: yarn test --coverage
 ```
 
-The inline `yarn lint`/`pnpm lint` step should be whatever Step 7 landed on — if stylelint
+The inline `yarn lint` step should be whatever Step 7 landed on — if stylelint
 or ls-lint got folded into that script, CI picks them up automatically; don't add separate
 CI steps for them.
 
 **`lint-commits` is not unrelated to `cli-style` the way its name suggests.** On `@v1` (and
 the `pnpm` branch), `lint-commits.yml` (and `lint-pr-title.yml`, if present) resolves its
 commitlint config via `require('@dhis2/cli-style').config.commitlint)` — it breaks with
-"Cannot find module '@dhis2/cli-style'" once this migration removes it (Step 10). Point it
-at `@v2` instead, which doesn't have this coupling, or replace it with a custom step using
-`@dhis2/config-commitlint` (Step 9) — see `references/ci-migration.md` Step 3 for both.
+"Cannot find module '@dhis2/cli-style'" once this migration removes it (Step 10). A yarn app
+on `@v1` needs to replace both with a custom step using `@dhis2/config-commitlint` (Step 9) —
+see `references/ci-migration.md` Step 3. A pnpm app avoids all of this by using `@v2`.
 
 ## Step 12: Verify
 

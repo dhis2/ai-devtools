@@ -223,9 +223,9 @@ In `.github/workflows/*.yml`:
   `actions/setup-node` step (instead of `cache: yarn`).
 
 If the app consumes `dhis2/workflows-platform` reusable workflows (`uses: dhis2/workflows-platform/.github/workflows/...@<ref>`),
-point them at a pnpm-compatible ref instead of the yarn-only `@v1` default — which one
-depends on whether this app is also migrating off `@dhis2/cli-style`; see
-`references/ci-migration.md` Step 3 for the two cases and which ref fits each.
+point them at a pnpm-native ref instead of the yarn-only `@v1`: the `pnpm` branch if the app
+keeps `@dhis2/cli-style`, or `@v2` if it's also moving off it — see
+`references/ci-migration.md` Step 3.
 
 ## Step 10: Verify
 
