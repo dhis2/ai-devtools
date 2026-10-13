@@ -157,24 +157,34 @@ applied — so this only blocks the _before_ run. Confirm the cause first:
 node -p "const {Temporal}=require(require.resolve('@js-temporal/polyfill',{paths:[require.resolve('@dhis2/multi-calendar-dates')]})); Temporal.PlainDate.from('2024-06-15').withCalendar('ethiopic').eraYear"
 ```
 
-To capture the baseline, temporarily patch the polyfill: `pnpm patch @js-temporal/polyfill@0.4.3`
-(confirm the version with `pnpm why @js-temporal/polyfill`), and in the directory it prints
-edit **both** `dist/index.cjs` (what jest loads) and `dist/index.esm.js` (what bundlers load).
-#357's diff doesn't apply to `0.4.x` as-is — eras here are named `era0`/`era1`, with no alias
-list — so add a `reviseIntlEra` to `EthiopicHelper` that maps the new codes onto them, right
-after its constructor (the built code is minified, so search for this exact string):
+To capture the baseline, temporarily patch `@js-temporal/polyfill@0.4.3` (confirm the version
+with `pnpm why`/`yarn why @js-temporal/polyfill`). **This patch is a local baseline aid only.
+Never commit it, and revert it once the baseline is captured.** It doesn't fix `2.x`, and
+nothing here should. Edit **both** `dist/index.cjs` (what jest loads) and `dist/index.esm.js`
+(what bundlers load). #357's diff doesn't apply to `0.4.x` as-is (eras here are named
+`era0`/`era1`, with no alias list), so add a `reviseIntlEra` to `EthiopicHelper` that maps the
+new codes onto them, right after its constructor. The built code is minified, so search for
+this exact string:
 
 ```diff
  super("ethiopic",[{name:"era0",isoEpoch:{year:-5492,month:7,day:17}},{name:"era1",isoEpoch:{year:8,month:8,day:27},anchorEpoch:{year:5501}}])}
 +reviseIntlEra(e){let{era:t,eraYear:r}=e;return"am"===t&&(t="era1"),"aa"===t&&(t="era0"),{era:t,eraYear:r}}
 ```
 
-Then `pnpm patch-commit <dir>` and re-run the one-liner above — it should print `2016`. (On
-yarn, use `patch-package` for the same edit.) Capture the baseline with the patch in place.
+- **yarn 1:** edit the files in `node_modules/@js-temporal/polyfill/dist/` directly. No
+  `patch-package` is needed, and the next `yarn install` undoes it.
+- **pnpm:** don't edit `node_modules` in place. Its files are hard-linked to the global
+  store, so the edit would leak into every other project. Use `pnpm patch
+@js-temporal/polyfill@0.4.3`, edit the files in the directory it prints, then
+  `pnpm patch-commit <dir>`. To revert, delete the `patches/` file and the
+  `patchedDependencies` entry, then reinstall.
 
-**Remove the patch as part of the bump** — delete the `patches/` file and its
-`patchedDependencies` entry when moving to `3.x`, since `3.x` no longer uses the polyfill's
-Ethiopic era handling. Don't leave it behind; it's a baseline aid, not part of the migration.
+Re-run the one-liner above. It should print `2016`. Capture the baseline snapshots with the
+patch in place, then **revert the patch before committing** the tests and snapshots. With the
+patch gone, the `ethiopian` cases fail on `2.x` until the bump lands. That's expected, since
+the next commit is the bump. `3.x` vendors the fix, so it needs no patch.
+**Exception:** if the app also imports `@js-temporal/polyfill` itself, it needs a lasting
+`0.5.1` patch after the upgrade. See Step 3.
 
 **If the app already has a test runner** (jest/vitest — check for an existing
 `*.test.ts`/`*.test.js` alongside the file that calls these functions, or a
@@ -334,14 +344,156 @@ before/after regression test (or standalone script) above is what actually close
 don't skip it and rely on `tsc`/`eslint`/a generic `pnpm test` pass alone as proof this is
 safe.
 
+## Step 3: Upgrade direct `@js-temporal/polyfill` usage to `0.5.1` (skip if the app doesn't import it)
+
+`@dhis2/multi-calendar-dates@3.x` and `@dhis2/ui@10.19+` both ask for
+`@js-temporal/polyfill@0.5.1`. Apps that import the polyfill themselves often pin it to
+`0.4.3`, either as a direct dependency or (more commonly, on yarn 1) as a `resolutions`
+entry. A pinned resolution silently forces every library onto the old version too. On yarn,
+it shows up as `warning Resolution field "@js-temporal/polyfill@0.4.3" is incompatible with
+requested version "@js-temporal/polyfill@0.5.1"`.
+
+### Find every direct usage
+
+```bash
+grep -rln "@js-temporal/polyfill" src                    # every file that imports it
+grep -n "js-temporal" package.json                       # dependencies? or only resolutions?
+```
+
+An app that imports the polyfill but only has it in `resolutions` is relying on yarn 1
+hoisting a transitive copy. Declare it as a real dependency as part of this step.
+
+For each importing file, list the Temporal API it calls. `0.5` removed `Temporal.Calendar`/
+`Temporal.TimeZone` objects (calendars are strings only), `getISOFields()`, `getCalendar()`,
+`Temporal.Now.plainDate(calendar)` (only the `…ISO()` variants remain), and the `calendar`
+property (now `calendarId`). It also renamed `era` codes, e.g. Ethiopic `era0`/`era1` became
+`ethioaa`/`ethiopic`, and some calendars now report `era: undefined`. Grep for those:
+
+```bash
+grep -rnE "Temporal\.(Calendar|TimeZone)|getISOFields|getCalendar|Now\.plainDate\(|\.calendar\b|\.era\b" <importing files>
+```
+
+Typical DHIS2 app usage (`PlainDate.from`/`compare`, `PlainDateTime` with `'iso8601'`,
+`Now.plainDateISO().withCalendar()`, `.since({ largestUnit, smallestUnit })`, `.subtract()`,
+`.with({ year })`, `.eraYear`) is unaffected. Prove it with the snapshot test below, don't
+assume it.
+
+### Write snapshot tests for every usage _before_ upgrading
+
+Same approach as Step 2: committed `toMatchSnapshot()` tests, captured on `0.4.3`, then re-run
+unmodified with `--ci` on `0.5.1`. Cover **every** function that calls the polyfill, through
+the app's own exported helpers or components, not raw polyfill calls. Run each one against
+**`gregory`, `ethiopian` (Temporal `ethiopic`) and `nepali`**. These three are the ones that
+matter, so don't spend effort on the others.
+
+- **Pin "now"** (`jest.useFakeTimers()` + `jest.setSystemTime(...)`) for anything calling
+  `Temporal.Now.*`, such as an age field computing years/months/days from today. The
+  polyfill reads `Date.now()`, so fake timers control it.
+- **Nepali isn't a Temporal calendar.** Apps usually guard it with an `isCalendarSupported`
+  check and fall back to ISO arithmetic via `multi-calendar-dates`' `convertToIso8601`/
+  `convertFromIso8601`. Test that fallback path explicitly.
+- **Ethiopic**: Temporal's `year` here is counted from the Amete Alem era (e.g. `7519`), and
+  `eraYear` is the Amete Mihret year DHIS2 users see (e.g. `2019`). Apps work around this
+  with `date.with({ year: date.eraYear })`. Both versions keep the same semantics, but
+  snapshot the result anyway.
+- If a helper/function is module-private (e.g. a `getCalculatedValues` inside a component
+  file), export it for testing rather than snapshotting through rendered UI.
+
+#### The Ethiopic era patch (applied by default, revertable)
+
+On newer Node / browsers with CLDR 48 (Node 24, and Node builds using system ICU 78), `Intl`
+reports Ethiopic eras as `am`/`aa`. Neither `0.4.3` nor `0.5.1` recognises those codes, so
+**any** Ethiopic date throws `RangeError: Era am (ISO year …) was not matched by any era`
+([`js-temporal/temporal-polyfill#357`](https://github.com/js-temporal/temporal-polyfill/pull/357)).
+Unlike Step 2, the app calls the polyfill directly here, so this isn't just a baseline problem:
+it breaks the app in production for Ethiopian users. The upstream fix is tracked in
+[LIBS-830](https://dhis2.atlassian.net/browse/LIBS-830).
+
+There are two patches here, with different lifetimes:
+
+- **`0.4.3`: temporary, never committed.** It exists only so the `ethiopian` snapshot cases
+  can run before the upgrade. Apply and revert it as in Step 2.
+- **`0.5.1`: kept, in its own commit.** This is the actual fix for the app's own Ethiopic
+  dates after the upgrade. It's only needed because the app imports the polyfill itself.
+  Apps that only go through `multi-calendar-dates` 3.x need no patch.
+
+**Apply the `0.5.1` patch by default, then offer to revert it in the summary.** The patch is
+big. The polyfill ships its `dist` files minified onto a single line, so
+`patch-package`/`pnpm patch` store the whole line, not just the change. The patch file is
+**~516 KB**, even though the actual edit is a few characters. Some teams won't want that in
+their repo, so:
+
+- **Default: patch.** Keep the `0.5.1` patch and the `ethiopian` snapshot cases in their own
+  commit, separate from the upgrade, so they can be dropped cleanly. Remove the patch once
+  LIBS-830 lands upstream.
+- **In the final summary, always offer the revert**, stating the patch size and linking
+  LIBS-830. For example: "The Ethiopic patch adds a ~516 KB file to `patches/` because the
+  polyfill's dist is minified onto one line. If you'd rather not carry it, I can drop that
+  commit and wait for the upstream fix (LIBS-830)."
+- **If the user chooses to revert:** drop that commit (or move it to its own branch if they
+  want to keep it around), and leave `ethiopian` out of the polyfill snapshot tests, since it
+  throws on CLDR 48 runtimes either way. Then record the known issue in the PR description.
+  Explain that both `0.4.3` and `0.5.1` are affected, link #357 and LIBS-830, and say which
+  app code calls the polyfill directly for Ethiopic dates (e.g. an age field).
+  `multi-calendar-dates@3.x` bundles its own copy of the fix, so conversions through it are
+  unaffected and its own Ethiopian tests still pass.
+
+Patch **both** `dist/index.cjs` (jest) and `dist/index.esm.js` (bundlers). The built code is
+minified, so search for the exact strings below.
+
+**`0.4.3`** (temporary, to capture the baseline only; see Step 2 for applying and reverting
+it): eras are named `era0`/`era1` with no alias list, so add a `reviseIntlEra` right after
+`EthiopicHelper`'s constructor:
+
+```diff
+ super("ethiopic",[{name:"era0",isoEpoch:{year:-5492,month:7,day:17}},{name:"era1",isoEpoch:{year:8,month:8,day:27},anchorEpoch:{year:5501}}])}
++reviseIntlEra(e){let{era:t,eraYear:r}=e;return"am"===t&&(t="era1"),"aa"===t&&(t="era0"),{era:t,eraYear:r}}
+```
+
+**`0.5.1`** (keep this one after the upgrade, until LIBS-830 is fixed upstream): eras have `code` + `names` alias lists, so
+#357's fix applies directly. Add `"aa"` and `"am"` as aliases:
+
+```diff
+-super("ethiopic",[{code:"ethioaa",names:["ethiopic-amete-alem","mundi"],isoEpoch:{year:-5492,month:7,day:17}},{code:"ethiopic",names:["incar"],isoEpoch:{year:8,month:8,day:27},anchorEpoch:{year:5501}}])}
++super("ethiopic",[{code:"ethioaa",names:["ethiopic-amete-alem","mundi","aa"],isoEpoch:{year:-5492,month:7,day:17}},{code:"ethiopic",names:["incar","am"],isoEpoch:{year:8,month:8,day:27},anchorEpoch:{year:5501}}])}
+```
+
+Apply the `0.5.1` patch with `pnpm patch @js-temporal/polyfill@0.5.1` → edit →
+`pnpm patch-commit <dir>` on pnpm. On yarn 1, edit `node_modules/@js-temporal/polyfill/dist/*`
+and run `npx patch-package @js-temporal/polyfill`, which needs `patch-package` in
+`postinstall`. Verify with the following, which should print `2016` once patched (on either
+version):
+
+```bash
+node -p "require('@js-temporal/polyfill').Temporal.PlainDate.from('2024-06-15').withCalendar('ethiopic').eraYear"
+```
+
+### The workflow
+
+1. Temporarily apply the `0.4.3` patch so the `ethiopian` cases can run, write the snapshot
+   tests, and run them to create the snapshots. Sanity-check the `.snap` values
+   (Ethiopic/Nepali dates should look like real local dates). Revert the patch, then commit
+   the tests and snapshots on their own. **Never commit the `0.4.3` patch.**
+2. Upgrade: remove the `0.4.3` `resolutions`/`pnpm.overrides` pin, add
+   `"@js-temporal/polyfill": "0.5.1"` to `dependencies`, reinstall, and confirm a single copy
+   resolves (`yarn why`/`pnpm why @js-temporal/polyfill`). Commit the upgrade without any
+   patch.
+3. Add the `0.5.1` patch in its own commit.
+4. Re-run the identical tests with `--ci`, plus `tsc` and lint. Don't `-u` a failing
+   snapshot. The diff is the finding (see Step 2).
+5. In the summary, offer to revert the patch commit, stating its size and linking LIBS-830
+   (see above).
+
 ## Troubleshooting
 
-| Symptom                                                                                                                                       | Fix                                                                                                                                                                                                                                                                                                                                       |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors                                                                | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide. |
-| A date/time string looks subtly wrong after bumping `@dhis2/multi-calendar-dates` (e.g. `T undefined:undefined:undefined`) but nothing errors | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them — see Step 2. This won't throw, so check output values, not just exit codes.                                                                                                                                     |
-| A timezone-corrected time string is wrong (e.g. off by the timezone offset) after re-deriving time-of-day                                     | The fix used `new Date()` (browser/system local time) instead of an `Intl.DateTimeFormat`-based lookup for the specific `timezone` the call site was passed — see the code sample in Step 2.                                                                                                                                              |
-| `RangeError: Era am (ISO year ...) was not matched by any era` on the `ethiopian` calendar while capturing the baseline                       | Unrelated `@js-temporal/polyfill@0.4.3` bug with CLDR 48's new Ethiopic era codes on newer Node — temporarily patch the polyfill to capture the baseline, then remove the patch with the bump (`3.x` vendors the fix). See "If `ethiopian` fails before you've bumped anything" in Step 2.                                                |
-| The before/after regression test fails on the `nepali` calendar specifically, but `gregory`/`ethiopian` pass                                  | Expected to be the highest-risk case — `#102` rewrote Nepali support from scratch (it's the one calendar this library implements itself rather than delegating to CLDR). Don't assume it's a test bug; diff the actual before/after values and check the library's own changelog/tests for that release before concluding it's safe.      |
-| No test runner is set up and it's unclear whether to add one just for this                                                                    | Don't — that's a bigger decision than a dependency bump warrants. Use the standalone verify script instead, and delete it once the bump is confirmed safe.                                                                                                                                                                                |
-| Unsure whether `useDatePicker` is in scope for this app's regression test, since the app also uses `@dhis2/ui`'s `Calendar`/`DatePicker`      | Check the import, not the visible UI — `import { useDatePicker } from '@dhis2/multi-calendar-dates'` is in scope (direct usage of the version this app controls); `@dhis2/ui`'s bundled `Calendar`/`DatePicker` components are not (they resolve their own separate internal copy).                                                       |
+| Symptom                                                                                                                                       | Fix                                                                                                                                                                                                                                                                                                                                                                                                     |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors                                                                | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide.                                                               |
+| A date/time string looks subtly wrong after bumping `@dhis2/multi-calendar-dates` (e.g. `T undefined:undefined:undefined`) but nothing errors | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them — see Step 2. This won't throw, so check output values, not just exit codes.                                                                                                                                                                                                   |
+| A timezone-corrected time string is wrong (e.g. off by the timezone offset) after re-deriving time-of-day                                     | The fix used `new Date()` (browser/system local time) instead of an `Intl.DateTimeFormat`-based lookup for the specific `timezone` the call site was passed — see the code sample in Step 2.                                                                                                                                                                                                            |
+| `RangeError: Era am (ISO year ...) was not matched by any era` on the `ethiopian` calendar while capturing the baseline                       | Unrelated `@js-temporal/polyfill@0.4.3` bug with CLDR 48's new Ethiopic era codes on newer Node. Temporarily patch the polyfill to capture the baseline, then revert it and never commit it (`3.x` vendors the fix). See "If `ethiopian` fails before you've bumped anything" in Step 2.                                                                                                                |
+| The before/after regression test fails on the `nepali` calendar specifically, but `gregory`/`ethiopian` pass                                  | Expected to be the highest-risk case — `#102` rewrote Nepali support from scratch (it's the one calendar this library implements itself rather than delegating to CLDR). Don't assume it's a test bug; diff the actual before/after values and check the library's own changelog/tests for that release before concluding it's safe.                                                                    |
+| `warning Resolution field "@js-temporal/polyfill@0.4.3" is incompatible with requested version "@js-temporal/polyfill@0.5.1"`                 | The app pins the polyfill in `resolutions`, forcing `multi-calendar-dates`/`@dhis2/ui` onto `0.4.3`. Follow Step 3: snapshot-test direct usages, then move to `0.5.1` as a real dependency.                                                                                                                                                                                                             |
+| `RangeError: Era am/aa … was not matched by any era` from app code (not just while capturing a baseline)                                      | The app calls the polyfill directly for Ethiopic dates, and CLDR 48 era codes break it. After the upgrade, apply the `0.5.1` patch from Step 3 by default, then offer to revert it in the summary (~516 KB), noting the known issue in the PR if reverted. Don't fix it on `0.4.3`: that patch is only a temporary baseline aid. Upstream fix: [LIBS-830](https://dhis2.atlassian.net/browse/LIBS-830). |
+| No test runner is set up and it's unclear whether to add one just for this                                                                    | Don't — that's a bigger decision than a dependency bump warrants. Use the standalone verify script instead, and delete it once the bump is confirmed safe.                                                                                                                                                                                                                                              |
+| Unsure whether `useDatePicker` is in scope for this app's regression test, since the app also uses `@dhis2/ui`'s `Calendar`/`DatePicker`      | Check the import, not the visible UI — `import { useDatePicker } from '@dhis2/multi-calendar-dates'` is in scope (direct usage of the version this app controls); `@dhis2/ui`'s bundled `Calendar`/`DatePicker` components are not (they resolve their own separate internal copy).                                                                                                                     |
