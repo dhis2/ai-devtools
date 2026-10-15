@@ -83,7 +83,7 @@ app can need any combination of, or none:
   `@dhis2/d2-i18n` — non-breaking (current major) by default for each, with an explicit
   choice offered whenever `latest` would cross a major version. Upgrading
   `@dhis2/multi-calendar-dates`/`@js-temporal/polyfill` is left to the separate
-  `multi-calendar-dates-upgrade` skill.
+  `calendar-upgrade` skill.
 - **README refresh.** A pnpm badge alongside existing badges, an app description pulled from
   the App Hub when the app is published there, and the scaffold's verbose "Available
   Scripts" section collapsed into a concise "Get Started".
@@ -104,6 +104,28 @@ still renders after logging in.
 
 ```sh
 npx skills add dhis2/ai-devtools --skill modernise-apps
+```
+
+## `@dhis2/skill-calendar-upgrade`
+
+An AI skill for moving an existing DHIS2 app onto `@dhis2/multi-calendar-dates` `3.x` and
+`@js-temporal/polyfill` `0.5.1`. `3.x` removed Temporal types from the library's public API,
+so this is treated as a behavioural migration rather than a routine bump:
+
+- **Library bump.** A before/after regression snapshot test of every direct import
+  (`getNowInCalendar`, the period helpers, `useDatePicker`) across the `gregory`,
+  `ethiopian` and `nepali` calendars, captured before bumping and re-run unmodified after.
+- **Helper migration.** Replaces the app's own calendar date formatting and arithmetic with
+  the library's `formatCalendarDate`, `addToCalendarDate` and `getDaysInMonth`.
+- **Direct polyfill upgrade.** Moves apps that import `@js-temporal/polyfill` from `0.4.3` to
+  `0.5.1`, with snapshot tests and a revertable patch for CLDR 48's Ethiopic era codes.
+- **Bundle check.** Lists the Temporal copies that end up in the production build from its
+  source maps, and works to get them down to one.
+
+### Install
+
+```sh
+npx skills add dhis2/ai-devtools --skill calendar-upgrade
 ```
 
 ---

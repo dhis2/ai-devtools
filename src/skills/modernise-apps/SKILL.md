@@ -19,7 +19,7 @@ description: >
     d2-app-scripts publish, semantic-release, or the App Hub API key/app ID.
     This skill is for modernising an already-existing app — for scaffolding a brand new app,
     use the dhis2-apps skill instead, and for upgrading @dhis2/multi-calendar-dates or
-    @js-temporal/polyfill, use the multi-calendar-dates-upgrade skill.
+    @js-temporal/polyfill, use the calendar-upgrade skill.
 ---
 
 # Modernising DHIS2 Apps
@@ -43,7 +43,7 @@ covers five independent tasks — an app can need any combination of them, or no
    (non-breaking by default, with an explicit choice offered if `latest` would cross a major
    version for any of them). Upgrading `@dhis2/multi-calendar-dates` and
    `@js-temporal/polyfill` is a separate, behavioural migration with its own skill,
-   `multi-calendar-dates-upgrade` — point the user to it if the app uses either.
+   `calendar-upgrade` — point the user to it if the app uses either.
 4. **Modernising the CI pipeline** — replacing bespoke GitHub Actions workflows with the
    shared `dhis2/workflows-platform` reusable workflows wherever one exists, and bumping any
    outdated action version or Node version left in whatever stays custom.
@@ -56,17 +56,17 @@ covers five independent tasks — an app can need any combination of them, or no
 
 ## First: confirm this is an existing DHIS2 app, and which task(s) apply
 
-| Check                                                                                                         | How                                                           | Result                                                                                              |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                       | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                            |
-| Neither found                                                                                                 | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one  |
-| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                              | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed  |
-| `pnpm-lock.yaml` already exists                                                                               | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                          |
-| `@dhis2/cli-style` is in `package.json`                                                                       | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed     |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n` is present and behind `latest`                                            | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed  |
-| `@dhis2/multi-calendar-dates` is below `3.2.0`, or `src` imports `@js-temporal/polyfill` pinned below `0.5.1` | Read `package.json` + `grep -rln "@js-temporal/polyfill" src` | **Calendar libraries behind** — out of scope here; suggest the `multi-calendar-dates-upgrade` skill |
-| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`                     | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed            |
-| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'`        | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)    |
+| Check                                                                                                         | How                                                           | Result                                                                                             |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                       | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                           |
+| Neither found                                                                                                 | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
+| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                              | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
+| `pnpm-lock.yaml` already exists                                                                               | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                         |
+| `@dhis2/cli-style` is in `package.json`                                                                       | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n` is present and behind `latest`                                            | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
+| `@dhis2/multi-calendar-dates` is below `3.2.0`, or `src` imports `@js-temporal/polyfill` pinned below `0.5.1` | Read `package.json` + `grep -rln "@js-temporal/polyfill" src` | **Calendar libraries behind** — out of scope here; suggest the `calendar-upgrade` skill            |
+| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`                     | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
+| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'`        | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)   |
 
 ## What does the user need?
 

@@ -61,7 +61,7 @@ revert to avoid the work unless the user explicitly wants to defer it.
 Not part of this skill. If the app depends on `@dhis2/multi-calendar-dates` or imports
 `@js-temporal/polyfill` directly, upgrading them is a separate, behavioural migration
 (`multi-calendar-dates` `3.x` is a real breaking change) — use the
-`multi-calendar-dates-upgrade` skill for it. It needs `@dhis2/ui` `10.19.3`+ to end up with a
+`calendar-upgrade` skill for it. It needs `@dhis2/ui` `10.19.3`+ to end up with a
 single `multi-calendar-dates` `3.x` and `@js-temporal/polyfill@0.5.1`, so if this step bumped
 `@dhis2/ui` past that, mention in the summary that the calendar upgrade is now unblocked.
 
