@@ -1,0 +1,12 @@
+{
+    "version": "0.0.1",
+    "organization": "DHIS2",
+    "date": "September 2026",
+    "abstract": "Sets up and uses the official Discourse MCP server (@discourse/mcp) against the DHIS2 Community of Practice at community.dhis2.org. Covers generating a user API key, registering the server with write tools enabled, searching and reading forum topics and posts, and drafting release announcements and replies as Discourse drafts that the user publishes from the composer. Uses the Chap & Modeling category as the worked example.",
+    "references": [
+        "https://community.dhis2.org",
+        "https://github.com/discourse/discourse-mcp",
+        "https://docs.discourse.org/#tag/Search",
+        "https://meta.discourse.org/t/user-api-keys-specification/48536"
+    ]
+}

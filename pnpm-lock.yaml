@@ -35,6 +35,8 @@ importers:
 
   src/skills/dhis2-apps: {}
 
+  src/skills/discourse: {}
+
   src/skills/example-skill: {}
 
   src/skills/modernise-apps: {}

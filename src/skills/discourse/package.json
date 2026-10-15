@@ -1,0 +1,12 @@
+{
+    "name": "@dhis2/skill-discourse",
+    "version": "0.0.1",
+    "description": "AI skill for the DHIS2 Community of Practice (community.dhis2.org) via the Discourse MCP server",
+    "license": "BSD-3-Clause",
+    "publishConfig": {
+        "access": "public"
+    },
+    "exports": {
+        ".": "./SKILL.md"
+    }
+}
