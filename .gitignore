@@ -1,2 +1,6 @@
 node_modules
 .claude/settings.local.json
+
+# Eval-time scratch artifacts (real app clones, scaffold output, agent transcripts) --
+# regenerable, not part of any shipped skill.
+src/skills/*-workspace/

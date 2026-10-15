@@ -1,0 +1,13 @@
+{
+    "name": "modernise-apps-smoke-test",
+    "private": true,
+    "version": "0.0.1",
+    "type": "module",
+    "description": "Standalone Playwright smoke-test tool bundled with the modernise-apps skill. Not part of any migrated app's dependency tree -- install once with `pnpm install` inside this folder, then run `node smoke-test.mjs`.",
+    "scripts": {
+        "smoke-test": "node smoke-test.mjs"
+    },
+    "dependencies": {
+        "playwright": "^1.62.1"
+    }
+}

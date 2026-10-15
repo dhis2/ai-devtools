@@ -1,0 +1,12 @@
+{
+    "name": "@dhis2/skill-modernise-apps",
+    "version": "0.0.1",
+    "description": "AI skill for modernising DHIS2 apps (pnpm migration and beyond)",
+    "license": "BSD-3-Clause",
+    "publishConfig": {
+        "access": "public"
+    },
+    "exports": {
+        ".": "./SKILL.md"
+    }
+}
