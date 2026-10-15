@@ -1,0 +1,12 @@
+{
+    "name": "@dhis2/skill-calendar-upgrade",
+    "version": "0.0.1",
+    "description": "AI skill for upgrading DHIS2 apps to @dhis2/multi-calendar-dates 3.x and @js-temporal/polyfill 0.5.1",
+    "license": "BSD-3-Clause",
+    "publishConfig": {
+        "access": "public"
+    },
+    "exports": {
+        ".": "./SKILL.md"
+    }
+}
