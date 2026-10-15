@@ -81,11 +81,9 @@ app can need any combination of, or none:
   freshly scaffolded app already uses by default.
 - **Platform library bumps.** Updates `@dhis2/ui`, `@dhis2/app-runtime`, and
   `@dhis2/d2-i18n` — non-breaking (current major) by default for each, with an explicit
-  choice offered whenever `latest` would cross a major version. Also bumps
-  `@dhis2/multi-calendar-dates` to its latest version when the app uses it, walking through
-  the real breaking change in `getNowInCalendar` (Temporal types and time-of-day data
-  dropped from its return value) with a before/after regression test rather than treating it
-  as routine.
+  choice offered whenever `latest` would cross a major version. Upgrading
+  `@dhis2/multi-calendar-dates`/`@js-temporal/polyfill` is left to the separate
+  `multi-calendar-dates-upgrade` skill.
 - **README refresh.** A pnpm badge alongside existing badges, an app description pulled from
   the App Hub when the app is published there, and the scaffold's verbose "Available
   Scripts" section collapsed into a concise "Get Started".

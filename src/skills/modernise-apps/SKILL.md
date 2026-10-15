@@ -10,18 +10,16 @@ description: >
     or d2-style onto the shared @dhis2/config-eslint / @dhis2/config-prettier /
     @dhis2/config-stylelint / @dhis2/config-lslint / @dhis2/config-commitlint packages, or
     mentions eslint.config.mjs, flat config, shared lint config, stylelint, ls-lint,
-    commitlint, migrating husky/git hooks, or bumping @dhis2/ui, @dhis2/app-runtime,
-    @dhis2/d2-i18n, @dhis2/multi-calendar-dates, or @js-temporal/polyfill to a newer version, or
-    replacing an app's own calendar date formatting/arithmetic with multi-calendar-dates'
-    formatCalendarDate, addToCalendarDate or getDaysInMonth helpers, in the
-    context of an existing DHIS2 app. Also use it when the user wants to modernise an
+    commitlint, migrating husky/git hooks, or bumping @dhis2/ui, @dhis2/app-runtime, or
+    @dhis2/d2-i18n to a newer version, in the context of an existing DHIS2 app. Also use it when the user wants to modernise an
     existing app's CI/GitHub Actions pipeline, move it onto the dhis2/workflows-platform
     reusable workflows, bump outdated GitHub Actions, or update the Node version used in CI.
     Also use it when the user wants to set up continuous delivery to the DHIS2 App Hub,
     automate publishing an app to apps.dhis2.org, or mentions App Hub release automation,
     d2-app-scripts publish, semantic-release, or the App Hub API key/app ID.
     This skill is for modernising an already-existing app — for scaffolding a brand new app,
-    use the dhis2-apps skill instead.
+    use the dhis2-apps skill instead, and for upgrading @dhis2/multi-calendar-dates or
+    @js-temporal/polyfill, use the multi-calendar-dates-upgrade skill.
 ---
 
 # Modernising DHIS2 Apps
@@ -43,15 +41,9 @@ covers five independent tasks — an app can need any combination of them, or no
    the same setup a fresh `pnpm create @dhis2/app` scaffold already uses by default.
 3. **Bumping platform libraries** — `@dhis2/ui`, `@dhis2/app-runtime`, and `@dhis2/d2-i18n`
    (non-breaking by default, with an explicit choice offered if `latest` would cross a major
-   version for any of them), and `@dhis2/multi-calendar-dates` if used — its `3.x` (now `latest`; target `3.2.0`+) is a
-   real breaking change: `getNowInCalendar` and the conversion functions return plain objects
-   with no Temporal methods. The task also covers migrating the app's own calendar date
-   formatting and arithmetic onto the library's `3.2.0` helpers (`formatCalendarDate`,
-   `addToCalendarDate`, `getDaysInMonth`). If the app
-   imports `@js-temporal/polyfill` directly (often pinned to `0.4.3` via `resolutions`), this
-   task also covers upgrading it to `0.5.1` and patching `0.5.1`'s Ethiopic era handling.
-   Nothing here fixes `2.x`/`0.4.3`. Patching those is only a temporary, uncommitted step to
-   capture a test baseline before bumping.
+   version for any of them). Upgrading `@dhis2/multi-calendar-dates` and
+   `@js-temporal/polyfill` is a separate, behavioural migration with its own skill,
+   `multi-calendar-dates-upgrade` — point the user to it if the app uses either.
 4. **Modernising the CI pipeline** — replacing bespoke GitHub Actions workflows with the
    shared `dhis2/workflows-platform` reusable workflows wherever one exists, and bumping any
    outdated action version or Node version left in whatever stays custom.
@@ -64,18 +56,17 @@ covers five independent tasks — an app can need any combination of them, or no
 
 ## First: confirm this is an existing DHIS2 app, and which task(s) apply
 
-| Check                                                                                                                 | How                                                           | Result                                                                                             |
-| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                               | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                           |
-| Neither found                                                                                                         | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
-| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                                      | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
-| `pnpm-lock.yaml` already exists                                                                                       | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                         |
-| `@dhis2/cli-style` is in `package.json`                                                                               | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n`/`multi-calendar-dates` is present and behind `latest`                             | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
-| `src` imports `@js-temporal/polyfill` and it's pinned below `0.5.1` (deps or `resolutions`)                           | `grep -rln "@js-temporal/polyfill" src` + read `package.json` | **Polyfill behind** — proceed with `references/platform-library-bumps.md` (Step 3)                 |
-| `src` formats calendar dates (`eraYear`, `padStart`) or does month/day arithmetic around `multi-calendar-dates` calls | See the grep in `references/platform-library-bumps.md` Step 2 | **Hand-rolled date code** — migrate it to the `3.2.0` helpers (Step 2)                             |
-| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`                             | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
-| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'`                | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)   |
+| Check                                                                                                         | How                                                           | Result                                                                                              |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                       | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                            |
+| Neither found                                                                                                 | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one  |
+| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                              | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed  |
+| `pnpm-lock.yaml` already exists                                                                               | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                          |
+| `@dhis2/cli-style` is in `package.json`                                                                       | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed     |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n` is present and behind `latest`                                            | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed  |
+| `@dhis2/multi-calendar-dates` is below `3.2.0`, or `src` imports `@js-temporal/polyfill` pinned below `0.5.1` | Read `package.json` + `grep -rln "@js-temporal/polyfill" src` | **Calendar libraries behind** — out of scope here; suggest the `multi-calendar-dates-upgrade` skill |
+| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`                     | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed            |
+| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'`        | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)    |
 
 ## What does the user need?
 
@@ -86,10 +77,6 @@ covers five independent tasks — an app can need any combination of them, or no
 | Sanity-check a migrated app renders correctly against a real server (opt-in)                          | `references/pnpm-migration.md` (Step 11)        |
 | Move off `@dhis2/cli-style`/`d2-style` onto shared lint/format configs                                | `references/style-configs-migration.md`         |
 | Bump `@dhis2/ui`/`@dhis2/app-runtime`/`@dhis2/d2-i18n` to the latest version                          | `references/platform-library-bumps.md` (Step 1) |
-| Bump `@dhis2/multi-calendar-dates` to the latest version                                              | `references/platform-library-bumps.md` (Step 2) |
-| Replace the app's own calendar date formatting/arithmetic with `multi-calendar-dates` helpers         | `references/platform-library-bumps.md` (Step 2) |
-| Upgrade direct `@js-temporal/polyfill` usage from `0.4.3` to `0.5.1`                                  | `references/platform-library-bumps.md` (Step 3) |
-| Check which Temporal copies end up in the build, and reduce them to `0.5.1`                           | `references/platform-library-bumps.md` (Step 4) |
 | Modernise CI: adopt `dhis2/workflows-platform` reusable workflows, bump outdated actions/Node version | `references/ci-migration.md`                    |
 | Set up continuous delivery to the App Hub                                                             | `references/apphub-release.md`                  |
 
@@ -135,49 +122,6 @@ in the future — this table is deliberately structured to grow.
   non-breaking default and say so in the summary. If a same-major bump surfaces new type or
   lint errors, that's a real regression to investigate via the changelog, not something to
   silence.
-- **`@dhis2/multi-calendar-dates`'s `3.x` is a real breaking change — don't treat it like
-  the routine non-breaking bumps above.**
-  `getNowInCalendar` no longer returns anything Temporal-shaped (calling `.add()` etc. on it
-  throws). Target `3.2.0`+.
-- **Migrate hand-rolled calendar date code to the library's helpers — don't re-implement it.**
-  Every place the app formats a calendar date (`eraYear ?? year` + padding), adds months/
-  years/days to one (13-month calendar lists, ISO round-trips, `validateDateString` clamping
-  loops) or works out days in a month should use `formatCalendarDate`, `addToCalendarDate` or
-  `getDaysInMonth` from `3.2.0`, and the app's own helper should be deleted. Do it in its own
-  commit after the bump; the regression snapshots should stay unchanged, and any change must
-  be explained. See `references/platform-library-bumps.md` Step 2.
-- **Before bumping `@dhis2/multi-calendar-dates`, write a before/after regression test
-  covering every direct import from the library** — `getNowInCalendar`, the
-  period-calculation helpers (`getFixedPeriodByDate`, `getAdjacentFixedPeriods`, etc. —
-  `#102` rewrote these too, not just `getNowInCalendar`), and `useDatePicker` if the app
-  uses it directly. The exclusion is `@dhis2/ui`'s own bundled `Calendar`/`DatePicker`
-  components (a separate internal copy this app doesn't control), not this library's own
-  hook — check the import, not the visible UI. Cover `gregory`, `ethiopian`, and `nepali`
-  for each; run the test against the currently-installed version first to confirm it's a
-  real baseline, then bump and re-run it unmodified. Add it as a real committed test if the
-  app has a test runner; otherwise use a temporary standalone script (a headless-hook test
-  via `renderHook` for `useDatePicker` if used) and delete it once confirmed safe. Don't rely
-  on `pnpm lint`/a generic `pnpm test` pass alone as proof this is safe. See
-  `references/platform-library-bumps.md` Step 2.
-- **Before upgrading a direct `@js-temporal/polyfill` dependency to `0.5.1`, snapshot-test
-  every function in the app that calls it**, against `gregory`, `ethiopian` and `nepali`
-  (those three matter, the rest don't), with "now" pinned. Capture the snapshots on `0.4.3`
-  first, then re-run them unmodified with `--ci` on `0.5.1`. Declare `0.5.1` as a real
-  dependency rather than a `resolutions` pin. On CLDR 48 runtimes, Ethiopic throws in **both**
-  versions ([LIBS-830](https://dhis2.atlassian.net/browse/LIBS-830)). Patch `0.4.3` only
-  temporarily, to capture the baseline, and **never commit that patch**. **Apply the `0.5.1`
-  patch by default**, in its own commit. In the summary, **offer to revert it**: say that the patch
-  file is ~516 KB because the dist is minified onto one line, and that the alternative is to
-  wait for the upstream fix. If reverted, leave `ethiopian` out of these tests and note the
-  known issue in the PR description. See `references/platform-library-bumps.md` Step 3.
-- **After bumping `@dhis2/multi-calendar-dates` or `@js-temporal/polyfill`, check the
-  production build's source maps for Temporal copies.** The only one should be
-  `multi-calendar-dates`' vendored copy (plus a direct `@js-temporal/polyfill@0.5.1` if the
-  app imports it). Flag multiple versions in the lockfile, and any extra copy in the bundle.
-  Try to get the bundle down to `0.5.1` only: bump the package that brings the old copy in,
-  or else force `0.5.1` with `resolutions`/`pnpm.overrides` after snapshot-testing that code,
-  plus the Step 3 Ethiopic patch if Ethiopic matters for the app. See
-  `references/platform-library-bumps.md` Step 4.
 - **When matching an app to its App Hub listing, match on `d2.config.js`'s `id` first, not
   `title`.** The App Hub display name doesn't always match the repo/title name (e.g.
   `aggregate-data-entry-app`'s `title` is `Data Entry`, listed on the App Hub as just "Data
