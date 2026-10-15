@@ -58,8 +58,10 @@ revert to avoid the work unless the user explicitly wants to defer it.
 
 ## Step 2: Bump `@dhis2/multi-calendar-dates` (skip if the app doesn't use it)
 
-Check for `@dhis2/multi-calendar-dates` in `package.json`. Its `3.x` line (`3.0.0`) is now
-`latest` — confirm the current version either way:
+Check for `@dhis2/multi-calendar-dates` in `package.json`. Its `3.x` line is now `latest`.
+Target **`3.2.0` or later**, which has the date helpers this step migrates the app onto (see
+"Replace hand-rolled calendar date code with the library's helpers" below). Confirm the
+current version:
 
 ```bash
 npm view @dhis2/multi-calendar-dates dist-tags
@@ -68,41 +70,23 @@ npm view @dhis2/multi-calendar-dates dist-tags
 This is a real breaking change, not a routine bump, regardless of which dist-tag it ships
 under — [`dhis2/multi-calendar-dates#102`](https://github.com/dhis2/multi-calendar-dates/pull/102)
 removed Temporal types from the public API entirely. Specifically, **`getNowInCalendar` now
-returns a plain `{ year, month, day, eraYear? }` object instead of a `Temporal.ZonedDateTime`
-— and unlike before, that object carries no time-of-day information at all**, not just a
-different date type. Grep for `getNowInCalendar` (the app may wrap it, like
+returns a plain `{ year, month, day, eraYear?, hour, minute, second }` object instead of a
+`Temporal.ZonedDateTime`**, with the time of day in the `timezone` it's given.
+`convertFromIso8601`/`convertToIso8601` return the same plain `{ year, month, day, eraYear? }`
+shape. Grep for `getNowInCalendar` (the app may wrap it, like
 `aggregate-data-entry-app`'s `getNowInCalendarString` does) and check every call site for:
 
-- **Calling a Temporal method on the result** (`.withCalendar()`, `.startOfDay()`, etc.) —
-  these don't exist on the plain object anymore. Re-derive what's needed via
-  `getNowInCalendar`/`convertFromIso8601` again instead.
-- **Reading `.hour`/`.minute`/`.second`/timezone-derived fields off the result** — these are
-  silently `undefined` now (not an error, so this won't fail loudly — check output
-  correctness, not just that it runs). If time-of-day is genuinely needed alongside the
-  calendar date, get it separately — but **don't reach for a plain `new Date()`** if the
-  original code accepted a `timezone` parameter (as `getNowInCalendar` itself still does):
-  `new Date()` only gives the browser's own local time, silently dropping timezone-correction
-  behavior the old Temporal-based code had. Use `Intl.DateTimeFormat` with `timeZone` instead,
-  which needs no extra dependency:
-    ```javascript
-    const getTimeOfDayInTimezone = (timezone) => {
-        const parts = new Intl.DateTimeFormat('en-US', {
-            timeZone: timezone,
-            hourCycle: 'h23',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        }).formatToParts(new Date())
-        const get = (type) => parts.find((p) => p.type === type)?.value
-        return {
-            hour: get('hour'),
-            minute: get('minute'),
-            second: get('second'),
-        }
-    }
-    ```
-- Plain reads of `.year`/`.month`/`.day`/`.eraYear` need no changes — that part of the shape
-  is unchanged.
+- **Calling a Temporal method on the result** (`.add()`, `.withCalendar()`, `.startOfDay()`,
+  etc.) — these don't exist on the plain object anymore, and the call throws. Don't rebuild
+  the arithmetic by hand: use `addToCalendarDate` (see the helpers section below).
+- **Building a date-time string by hand** from `.hour`/`.minute`/`.second` — use
+  `formatCalendarDate(now, { includeTime: true })` instead (see the helpers section below).
+- **Reading `.year` for an Ethiopic date** — `year` is the Amete Alem year (e.g. `7516`);
+  the year DHIS2 shows is `eraYear` (`2016`). Islamic has no `eraYear`. Always read
+  `eraYear ?? year` (`formatCalendarDate` does this for you), never
+  `calendar === 'ethiopian' ? eraYear : year`, which misses the `ethiopic` id.
+- Plain reads of `.month`/`.day`/`.eraYear` need no changes — that part of the shape is
+  unchanged.
 
 ### Write a before/after regression test for direct library usage
 
@@ -311,9 +295,9 @@ for (const calendar of CALENDARS) {
 
 Redirect the output to a file before bumping (`node verify-multi-calendar-dates.mjs >
 /tmp/before.json`), bump the dependency, run it again (`> /tmp/after.json`), and `diff
-/tmp/before.json /tmp/after.json`. Anything beyond `getNowInCalendar`'s missing time-of-day
-fields (expected — already covered above) is a real behavioral difference to investigate
-before shipping. Delete the script afterward — it's a verification aid for this migration,
+/tmp/before.json /tmp/after.json`. Anything beyond `getNowInCalendar`'s return shape
+(expected — already covered above) is a real behavioral difference to investigate before
+shipping. Delete the script afterward — it's a verification aid for this migration,
 not something to leave behind in the app's repo.
 
 **`useDatePicker` doesn't fit this plain-Node script** — it's a React hook, not a pure
@@ -323,13 +307,19 @@ raising with the user rather than silently skipping it — a plain-object diff s
 cover it, only a real (even minimal, temporary) React test can.
 
 Bump the dependency to whatever version `npm view ... dist-tags` showed above resolves
-`latest` to (`3.0.0` as of this writing) and verify:
+`latest` to (`3.2.0` as of this writing, and at least `3.2.0`) and verify:
 
 ```json
 "dependencies": {
-    "@dhis2/multi-calendar-dates": "^3.0.0"
+    "@dhis2/multi-calendar-dates": "^3.2.0"
 }
 ```
+
+Also check that the lockfile ends up with a single `3.x` copy: older `@dhis2/ui` versions
+(before `10.19.3`) bring their own `multi-calendar-dates`. Bump `@dhis2/ui` alongside if
+needed, and deduplicate (`npx yarn-deduplicate --packages
+@dhis2/multi-calendar-dates --packages @dhis2/ui yarn.lock` on yarn 1). A nested `1.x` copy
+under `@dhis2/analytics` is expected and can't be removed from the app.
 
 ```bash
 pnpm install
@@ -338,11 +328,82 @@ pnpm test
 ```
 
 Since this is a real behavioral change (not just a type change), a passing `tsc`/`eslint`
-pass doesn't guarantee correctness here on its own — the broken case above (missing
-time-of-day fields) compiles and runs fine, it just silently produces wrong output. The
+pass doesn't guarantee correctness here on its own — a wrong result (e.g. Nepali month arithmetic
+done in ISO terms, or the wrong Ethiopic year) compiles and runs fine, it just silently
+produces wrong output. The
 before/after regression test (or standalone script) above is what actually closes that gap;
 don't skip it and rely on `tsc`/`eslint`/a generic `pnpm test` pass alone as proof this is
 safe.
+
+### Replace hand-rolled calendar date code with the library's helpers (`3.2.0`+)
+
+The library has three helpers that cover what DHIS2 apps have historically written for
+themselves. **Every instance of the patterns below should be migrated to the library**,
+and the app's own helper deleted — not kept alongside, and not re-implemented when fixing a
+`3.x` breakage (e.g. a `getNowInCalendar(calendar).add(...)` call that now throws):
+
+| Helper                                                       | What it does                                                                                                                                                                                       |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getDaysInMonth({ year, month }, calendar)`                  | Days in a month: 29 for February 2024, 5 or 6 for the Ethiopic 13th month, up to 32 for Nepali                                                                                                     |
+| `addToCalendarDate(date, { years, months, days }, calendar)` | Adds (or, with negative values, subtracts) years and months in the calendar's own months, clamps the day to the end of the month, then adds days. Returns a plain `{ year, month, day, eraYear? }` |
+| `formatCalendarDate(date, { format, includeTime })`          | `yyyy-MM-dd` (or `format: 'DD-MM-YYYY'`), with `includeTime: true` appending `Thh:mm:ss` from `getNowInCalendar`'s result (it throws if the date has no time)                                      |
+
+All three read the year as `eraYear ?? year`, so `getNowInCalendar`/`convertFromIso8601`
+results can be passed straight in. They accept DHIS2 calendar ids (`ethiopian`, `iso8601`,
+`gregorian`, …) as well as Intl ids, and throw for a date that doesn't exist (e.g. month 13 in
+a 12-month calendar) or a Nepali year outside 1970–2100.
+
+**Find the patterns to migrate** — grep `src` around every `@dhis2/multi-calendar-dates`
+import, including the app's own date utils (`date.js`, `time.js`, `dates.js`, `date-utils.js`
+are common names):
+
+```bash
+grep -rnE "eraYear|padStart|padWithZero|THIRTEEN_MONTH|monthsInYear|daysInMonth|validateDateString|\.add\(" src
+```
+
+| Hand-rolled pattern                                                                                                                                                         | Replace with                                                                               |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| Building `yyyy-MM-dd`/`DD-MM-YYYY` from a calendar date with `padStart`/`padWithZeros` and `eraYear ?? year` (or `calendar === 'ethiopian' ? eraYear : year`)               | `formatCalendarDate(date)` / `formatCalendarDate(date, { format: 'DD-MM-YYYY' })`          |
+| The same, plus `T${hour}:${minute}:${second}` from `getNowInCalendar`                                                                                                       | `formatCalendarDate(now, { includeTime: true })`                                           |
+| Padding the result of `convertToIso8601`/`convertFromIso8601` into a string                                                                                                 | `formatCalendarDate(convertToIso8601(...))`                                                |
+| Adding/subtracting months or years with a `THIRTEEN_MONTH_CALENDARS`-style list, `year * monthsInYear + month` index maths, or a `validateDateString` loop to clamp the day | `addToCalendarDate(date, { months }, calendar)`                                            |
+| Adding days by converting to ISO, using `Date`/milliseconds, and converting back                                                                                            | `addToCalendarDate(date, { days }, calendar)` (keep any time part of the string as it was) |
+| "One year ago" as `year - 1` with no clamping (breaks on 29 February and Ethiopic Pagume)                                                                                   | `addToCalendarDate(now, { years: -1 }, calendar)`                                          |
+| Days in a month via native `Date` (`new Date(y, m, 0)`), a `validateDateString` loop from 32 down, or an app copy of the Nepali month table                                 | `getDaysInMonth({ year, month }, calendar)`                                                |
+| `getNowInCalendar(calendar).add(period)` (throws on `3.x`)                                                                                                                  | `formatCalendarDate(addToCalendarDate(getNowInCalendar(calendar), period, calendar))`      |
+
+What the library does **not** cover, so keep the app's own code for it: months in a year (no
+helper — keep a 13-month calendar list if the app needs one), the `julian` calendar (not
+supported; apps that map it to `gregory` need their own 29 February rule for century years),
+and formatting Temporal objects the app creates itself with a direct `@js-temporal/polyfill`
+import (Step 3's scope, not this one).
+
+How to migrate:
+
+1. Do it in its **own commit after the bump**, so the bump's snapshot diff stays separate from
+   the refactor's. The regression snapshots from above should come through **unchanged**. Any
+   snapshot that does change must be explained in the commit message — typically one of:
+    - the `ethiopic` id now gives the era year (the old code only special-cased
+      `ethiopian`) — a fix;
+    - a nonexistent date (month 13 in a 12-month calendar) now throws instead of returning a
+      made-up value — check that no caller can pass one;
+    - Nepali month arithmetic keeps the day of the month instead of drifting by 1–5 days
+      (it was done in ISO terms) — a fix.
+2. Delete the app's helpers, constants and tests that are no longer used anywhere
+   (`grep -rn <name> src` before deleting an export). Keep shared utilities such as a
+   `padWithZeroes` that other, unrelated code still imports.
+3. If a test mocks `@dhis2/multi-calendar-dates` with `jest.mock`, forward the new functions
+   lazily inside the factory (`getDaysInMonth: (...args) =>
+jest.requireActual('@dhis2/multi-calendar-dates').getDaysInMonth(...args)`); spreading
+   `jest.requireActual` at the top of the factory can fail.
+4. Re-enable tests the app had skipped or commented out because `2.x` threw for Ethiopic
+   dates, and run them — they usually pass on `3.2.0`.
+
+Examples from real migrations: climate-app's `getCalendarDate` (a `THIRTEEN_MONTH_CALENDARS`
+list, `addMonths`, `addDays` and a local `formatCalendarDate`) became one
+`formatCalendarDate(addToCalendarDate(getNowInCalendar(calendar), { years, months, days },
+calendar))`; aggregate-data-entry-app's `stringifyDate` became `formatCalendarDate(now,
+{ includeTime: long })`; maps-app's `getMaxDaysInMonth` became a `getDaysInMonth` call.
 
 ## Step 3: Upgrade direct `@js-temporal/polyfill` usage to `0.5.1` (skip if the app doesn't import it)
 
@@ -484,16 +545,115 @@ node -p "require('@js-temporal/polyfill').Temporal.PlainDate.from('2024-06-15').
 5. In the summary, offer to revert the patch commit, stating its size and linking LIBS-830
    (see above).
 
+## Step 4: Check which Temporal copies end up in the build (after Step 2 or Step 3)
+
+After bumping `@dhis2/multi-calendar-dates` (Step 2) or a direct `@js-temporal/polyfill`
+(Step 3), check what the **production build** contains. The only Temporal implementation in
+the bundle should be the copy that `multi-calendar-dates` `3.x` vendors
+(`@dhis2/multi-calendar-dates/build/es/vendor/temporal`, which already has the Ethiopic era
+fix), plus `@js-temporal/polyfill@0.5.1` only if the app imports the polyfill itself (Step 3).
+`3.x` lists `@js-temporal/polyfill` as a dependency but doesn't import it at runtime.
+
+The lockfile alone doesn't answer this. It often has more copies than the bundle does: for
+example, `@dhis2/analytics` still depends on `multi-calendar-dates` `1.x` with
+`@js-temporal/polyfill@0.4.3`, but if the app only imports components that don't use
+calendars (such as `OrgUnitDimension`), that code is tree-shaken out of the build.
+
+1. **List the copies in the lockfile**, and flag in the summary if there's more than one
+   version of either package:
+
+    ```bash
+    yarn why @js-temporal/polyfill        # or: pnpm why @js-temporal/polyfill
+    yarn why @dhis2/multi-calendar-dates
+    ```
+
+2. **Build, then list the `multi-calendar-dates` and `@js-temporal/polyfill` copies in the
+   bundle**, from the source maps the platform build writes next to the bundles in
+   `build/app`. Run this from the app's root after the build:
+
+    ```bash
+    node -e '
+    const fs = require("fs")
+    const path = require("path")
+    const maps = []
+    const walk = (dir) =>
+        fs.readdirSync(dir, { withFileTypes: true }).forEach((e) => {
+            const p = path.join(dir, e.name)
+            if (e.isDirectory()) walk(p)
+            else if (p.endsWith(".js.map")) maps.push(p)
+        })
+    walk("build/app")
+    const copies = {}
+    for (const map of maps) {
+        for (const source of JSON.parse(fs.readFileSync(map, "utf8")).sources) {
+            const match = source.match(
+                /node_modules\/(?:.*\/)?(?:@js-temporal\/polyfill|@dhis2\/multi-calendar-dates)(?=\/)/
+            )
+            if (match && !copies[match[0]]) {
+                const { version } = require(path.resolve(match[0], "package.json"))
+                copies[match[0]] = version
+            }
+        }
+    }
+    console.log(maps.length ? copies : "no source maps found in build/app")
+    '
+    ```
+
+    **Expected:** only `multi-calendar-dates` `3.x` entries (its Temporal is the vendored
+    copy, which these source maps show under `build/es/vendor/temporal`), and no
+    `@js-temporal/polyfill` entry, unless the app imports the polyfill itself (Step 3), in
+    which case it must be `0.5.1`. **Flag anything else.** Look at versions, not paths: an old
+    copy can be hoisted to the top-level `node_modules/@js-temporal/polyfill` even though only
+    a nested package uses it. For example, maps-app (which uses analytics' period selectors)
+    bundles:
+
+    ```text
+    { 'node_modules/@dhis2/multi-calendar-dates': '3.2.0',
+      'node_modules/@js-temporal/polyfill': '0.4.3',
+      'node_modules/@dhis2/analytics/node_modules/@dhis2/multi-calendar-dates': '1.3.2' }
+    ```
+
+    Here analytics' period selectors run on `multi-calendar-dates` `1.3.2` with the `0.4.3`
+    polyfill, which has no Ethiopic era fix (and adds to the bundle's size). climate-app,
+    which only imports `OrgUnitDimension` from analytics, bundles just
+    `{ 'node_modules/@dhis2/multi-calendar-dates': '3.2.0' }`, although its lockfile has the
+    same extra copies.
+
+3. **If there are extra copies, try to get the bundle down to `0.5.1` only:**
+    - First bump whatever pulls the old copy in, using `yarn why`/`pnpm why`: `@dhis2/ui`
+      `10.19.3`+ (older versions bring `multi-calendar-dates` `2.x`), the app shell (the
+      `@dhis2/cli-app-scripts`/app-platform release that has `@dhis2/ui` `10.19.3`+), or
+      `@dhis2/analytics` once it's on `multi-calendar-dates` `3.x`.
+    - If that's not possible, force the remaining copies to `0.5.1` with `resolutions` (yarn 1)
+      or `pnpm.overrides` (pnpm): `"@js-temporal/polyfill": "0.5.1"`. Those packages weren't
+      released against `0.5.1`, so before keeping the override, snapshot-test the app code that
+      goes through them (the Step 2/Step 3 approach, with `gregory`, `ethiopian` and `nepali`).
+      This is the only case where a `resolutions` pin is right here: Step 3 declares `0.5.1` as
+      a direct dependency instead, because there the app imports it itself.
+    - **If Ethiopic matters for the app** (it's used on Ethiopian-calendar instances, and the
+      code that goes through the forced copy handles server-calendar dates, such as analytics'
+      period selectors), also apply the `0.5.1` Ethiopic era patch from Step 3. Unpatched,
+      `0.5.1` still throws `Era am … was not matched by any era` on CLDR 48 runtimes. Say in the
+      summary that the patch was applied, and offer to revert it, as in Step 3.
+    - If neither works (e.g. the old copy is pinned exactly and overriding it breaks the
+      snapshot tests), leave it and report it in the summary and the PR description, naming
+      which package brings it in.
+
+4. **Re-run the build and the source-map check**, and put the result in the PR description:
+   which copies the lockfile has, which ones the bundle has, and why any extra one is still
+   there.
+
 ## Troubleshooting
 
-| Symptom                                                                                                                                       | Fix                                                                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors                                                                | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide.                                                               |
-| A date/time string looks subtly wrong after bumping `@dhis2/multi-calendar-dates` (e.g. `T undefined:undefined:undefined`) but nothing errors | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them — see Step 2. This won't throw, so check output values, not just exit codes.                                                                                                                                                                                                   |
-| A timezone-corrected time string is wrong (e.g. off by the timezone offset) after re-deriving time-of-day                                     | The fix used `new Date()` (browser/system local time) instead of an `Intl.DateTimeFormat`-based lookup for the specific `timezone` the call site was passed — see the code sample in Step 2.                                                                                                                                                                                                            |
-| `RangeError: Era am (ISO year ...) was not matched by any era` on the `ethiopian` calendar while capturing the baseline                       | Unrelated `@js-temporal/polyfill@0.4.3` bug with CLDR 48's new Ethiopic era codes on newer Node. Temporarily patch the polyfill to capture the baseline, then revert it and never commit it (`3.x` vendors the fix). See "If `ethiopian` fails before you've bumped anything" in Step 2.                                                                                                                |
-| The before/after regression test fails on the `nepali` calendar specifically, but `gregory`/`ethiopian` pass                                  | Expected to be the highest-risk case — `#102` rewrote Nepali support from scratch (it's the one calendar this library implements itself rather than delegating to CLDR). Don't assume it's a test bug; diff the actual before/after values and check the library's own changelog/tests for that release before concluding it's safe.                                                                    |
-| `warning Resolution field "@js-temporal/polyfill@0.4.3" is incompatible with requested version "@js-temporal/polyfill@0.5.1"`                 | The app pins the polyfill in `resolutions`, forcing `multi-calendar-dates`/`@dhis2/ui` onto `0.4.3`. Follow Step 3: snapshot-test direct usages, then move to `0.5.1` as a real dependency.                                                                                                                                                                                                             |
-| `RangeError: Era am/aa … was not matched by any era` from app code (not just while capturing a baseline)                                      | The app calls the polyfill directly for Ethiopic dates, and CLDR 48 era codes break it. After the upgrade, apply the `0.5.1` patch from Step 3 by default, then offer to revert it in the summary (~516 KB), noting the known issue in the PR if reverted. Don't fix it on `0.4.3`: that patch is only a temporary baseline aid. Upstream fix: [LIBS-830](https://dhis2.atlassian.net/browse/LIBS-830). |
-| No test runner is set up and it's unclear whether to add one just for this                                                                    | Don't — that's a bigger decision than a dependency bump warrants. Use the standalone verify script instead, and delete it once the bump is confirmed safe.                                                                                                                                                                                                                                              |
-| Unsure whether `useDatePicker` is in scope for this app's regression test, since the app also uses `@dhis2/ui`'s `Calendar`/`DatePicker`      | Check the import, not the visible UI — `import { useDatePicker } from '@dhis2/multi-calendar-dates'` is in scope (direct usage of the version this app controls); `@dhis2/ui`'s bundled `Calendar`/`DatePicker` components are not (they resolve their own separate internal copy).                                                                                                                     |
+| Symptom                                                                                                                                                              | Fix                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n` bump surfaces new TypeScript/ESLint errors                                                                                       | If it was a same-major bump, the release wasn't purely non-breaking for a prop/export the app uses — check that library's changelog entry rather than suppressing the error, and consider pinning back a version if it's a real regression. If it was a deliberate cross-major bump, this is expected — fix it using the migration guide.                                                               |
+| The app has its own date formatting, month/day arithmetic or days-in-month code around `multi-calendar-dates` calls                                                  | Migrate it to `formatCalendarDate`/`addToCalendarDate`/`getDaysInMonth` and delete the app's copy. See "Replace hand-rolled calendar date code with the library's helpers" in Step 2.                                                                                                                                                                                                                   |
+| A regression snapshot changes when moving onto the `3.2.0` helpers                                                                                                   | Explain it before updating: the `ethiopic` id getting the era year, a nonexistent date (e.g. month 13 in a 12-month calendar) now throwing, or Nepali month arithmetic no longer drifting are expected. Anything else is a regression. See Step 2.                                                                                                                                                      |
+| `RangeError: Era am (ISO year ...) was not matched by any era` on the `ethiopian` calendar while capturing the baseline                                              | Unrelated `@js-temporal/polyfill@0.4.3` bug with CLDR 48's new Ethiopic era codes on newer Node. Temporarily patch the polyfill to capture the baseline, then revert it and never commit it (`3.x` vendors the fix). See "If `ethiopian` fails before you've bumped anything" in Step 2.                                                                                                                |
+| The before/after regression test fails on the `nepali` calendar specifically, but `gregory`/`ethiopian` pass                                                         | Expected to be the highest-risk case — `#102` rewrote Nepali support from scratch (it's the one calendar this library implements itself rather than delegating to CLDR). Don't assume it's a test bug; diff the actual before/after values and check the library's own changelog/tests for that release before concluding it's safe.                                                                    |
+| `warning Resolution field "@js-temporal/polyfill@0.4.3" is incompatible with requested version "@js-temporal/polyfill@0.5.1"`                                        | The app pins the polyfill in `resolutions`, forcing `multi-calendar-dates`/`@dhis2/ui` onto `0.4.3`. Follow Step 3: snapshot-test direct usages, then move to `0.5.1` as a real dependency.                                                                                                                                                                                                             |
+| `RangeError: Era am/aa … was not matched by any era` from app code (not just while capturing a baseline)                                                             | The app calls the polyfill directly for Ethiopic dates, and CLDR 48 era codes break it. After the upgrade, apply the `0.5.1` patch from Step 3 by default, then offer to revert it in the summary (~516 KB), noting the known issue in the PR if reverted. Don't fix it on `0.4.3`: that patch is only a temporary baseline aid. Upstream fix: [LIBS-830](https://dhis2.atlassian.net/browse/LIBS-830). |
+| The Step 4 check shows an `@js-temporal/polyfill` entry other than a direct `0.5.1`, or a `multi-calendar-dates` below `3.x` (e.g. `1.3.2` under `@dhis2/analytics`) | An older `multi-calendar-dates` is bundled with its own polyfill (the polyfill may be hoisted to the top level, so check the versions, not the paths). Bump the package that brings it in; otherwise force `0.5.1` with `resolutions`/`pnpm.overrides`, snapshot-test that code, and add the Step 3 Ethiopic patch if Ethiopic matters. See Step 4.                                                     |
+| No test runner is set up and it's unclear whether to add one just for this                                                                                           | Don't — that's a bigger decision than a dependency bump warrants. Use the standalone verify script instead, and delete it once the bump is confirmed safe.                                                                                                                                                                                                                                              |
+| Unsure whether `useDatePicker` is in scope for this app's regression test, since the app also uses `@dhis2/ui`'s `Calendar`/`DatePicker`                             | Check the import, not the visible UI — `import { useDatePicker } from '@dhis2/multi-calendar-dates'` is in scope (direct usage of the version this app controls); `@dhis2/ui`'s bundled `Calendar`/`DatePicker` components are not (they resolve their own separate internal copy).                                                                                                                     |

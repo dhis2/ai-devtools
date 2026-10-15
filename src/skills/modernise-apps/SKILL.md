@@ -11,7 +11,9 @@ description: >
     @dhis2/config-stylelint / @dhis2/config-lslint / @dhis2/config-commitlint packages, or
     mentions eslint.config.mjs, flat config, shared lint config, stylelint, ls-lint,
     commitlint, migrating husky/git hooks, or bumping @dhis2/ui, @dhis2/app-runtime,
-    @dhis2/d2-i18n, @dhis2/multi-calendar-dates, or @js-temporal/polyfill to a newer version, in the
+    @dhis2/d2-i18n, @dhis2/multi-calendar-dates, or @js-temporal/polyfill to a newer version, or
+    replacing an app's own calendar date formatting/arithmetic with multi-calendar-dates'
+    formatCalendarDate, addToCalendarDate or getDaysInMonth helpers, in the
     context of an existing DHIS2 app. Also use it when the user wants to modernise an
     existing app's CI/GitHub Actions pipeline, move it onto the dhis2/workflows-platform
     reusable workflows, bump outdated GitHub Actions, or update the Node version used in CI.
@@ -41,9 +43,11 @@ covers five independent tasks — an app can need any combination of them, or no
    the same setup a fresh `pnpm create @dhis2/app` scaffold already uses by default.
 3. **Bumping platform libraries** — `@dhis2/ui`, `@dhis2/app-runtime`, and `@dhis2/d2-i18n`
    (non-breaking by default, with an explicit choice offered if `latest` would cross a major
-   version for any of them), and `@dhis2/multi-calendar-dates` if used — its `3.x` (`3.0.0`,
-   now `latest`) is a real breaking change: `getNowInCalendar`
-   dropped Temporal types and time-of-day data from its return value entirely. If the app
+   version for any of them), and `@dhis2/multi-calendar-dates` if used — its `3.x` (now `latest`; target `3.2.0`+) is a
+   real breaking change: `getNowInCalendar` and the conversion functions return plain objects
+   with no Temporal methods. The task also covers migrating the app's own calendar date
+   formatting and arithmetic onto the library's `3.2.0` helpers (`formatCalendarDate`,
+   `addToCalendarDate`, `getDaysInMonth`). If the app
    imports `@js-temporal/polyfill` directly (often pinned to `0.4.3` via `resolutions`), this
    task also covers upgrading it to `0.5.1` and patching `0.5.1`'s Ethiopic era handling.
    Nothing here fixes `2.x`/`0.4.3`. Patching those is only a temporary, uncommitted step to
@@ -60,17 +64,18 @@ covers five independent tasks — an app can need any combination of them, or no
 
 ## First: confirm this is an existing DHIS2 app, and which task(s) apply
 
-| Check                                                                                                  | How                                                           | Result                                                                                             |
-| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                           |
-| Neither found                                                                                          | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
-| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                       | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
-| `pnpm-lock.yaml` already exists                                                                        | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                         |
-| `@dhis2/cli-style` is in `package.json`                                                                | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
-| `@dhis2/ui`/`app-runtime`/`d2-i18n`/`multi-calendar-dates` is present and behind `latest`              | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
-| `src` imports `@js-temporal/polyfill` and it's pinned below `0.5.1` (deps or `resolutions`)            | `grep -rln "@js-temporal/polyfill" src` + read `package.json` | **Polyfill behind** — proceed with `references/platform-library-bumps.md` (Step 3)                 |
-| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`              | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
-| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'` | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)   |
+| Check                                                                                                                 | How                                                           | Result                                                                                             |
+| --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `d2.config.js` exists and `@dhis2/cli-app-scripts` is in `package.json`                                               | Glob + read `package.json`                                    | **DHIS2 app** — continue                                                                           |
+| Neither found                                                                                                         | —                                                             | **Not a DHIS2 app** — this skill doesn't apply; see `dhis2-apps` if the user wants to scaffold one |
+| `yarn.lock` exists and `pnpm-lock.yaml` does not                                                                      | `ls`                                                          | **Not yet migrated to pnpm** — proceed with `references/pnpm-migration.md` if that's what's needed |
+| `pnpm-lock.yaml` already exists                                                                                       | `ls`                                                          | **Already migrated to pnpm** — nothing to do for that task                                         |
+| `@dhis2/cli-style` is in `package.json`                                                                               | Read `package.json`                                           | **Still on `d2-style`** — proceed with `references/style-configs-migration.md` if that's needed    |
+| `@dhis2/ui`/`app-runtime`/`d2-i18n`/`multi-calendar-dates` is present and behind `latest`                             | Read `package.json` + `npm view <pkg> dist-tags`              | **Platform library behind** — proceed with `references/platform-library-bumps.md` if that's needed |
+| `src` imports `@js-temporal/polyfill` and it's pinned below `0.5.1` (deps or `resolutions`)                           | `grep -rln "@js-temporal/polyfill" src` + read `package.json` | **Polyfill behind** — proceed with `references/platform-library-bumps.md` (Step 3)                 |
+| `src` formats calendar dates (`eraYear`, `padStart`) or does month/day arithmetic around `multi-calendar-dates` calls | See the grep in `references/platform-library-bumps.md` Step 2 | **Hand-rolled date code** — migrate it to the `3.2.0` helpers (Step 2)                             |
+| `.github/workflows/*.yml` has bespoke jobs, not just `uses: dhis2/workflows-platform/...`                             | Read `.github/workflows/*.yml`                                | **CI not fully modernised** — proceed with `references/ci-migration.md` if that's needed           |
+| No workflow calls `.../release.yml` with App Hub publish on, and `d2.config.js`'s `type` isn't `'lib'`                | Read `.github/workflows/*.yml` + `d2.config.js`               | **No App Hub CD** — offer `references/apphub-release.md`; don't set it up unprompted (see Rules)   |
 
 ## What does the user need?
 
@@ -82,7 +87,9 @@ covers five independent tasks — an app can need any combination of them, or no
 | Move off `@dhis2/cli-style`/`d2-style` onto shared lint/format configs                                | `references/style-configs-migration.md`         |
 | Bump `@dhis2/ui`/`@dhis2/app-runtime`/`@dhis2/d2-i18n` to the latest version                          | `references/platform-library-bumps.md` (Step 1) |
 | Bump `@dhis2/multi-calendar-dates` to the latest version                                              | `references/platform-library-bumps.md` (Step 2) |
+| Replace the app's own calendar date formatting/arithmetic with `multi-calendar-dates` helpers         | `references/platform-library-bumps.md` (Step 2) |
 | Upgrade direct `@js-temporal/polyfill` usage from `0.4.3` to `0.5.1`                                  | `references/platform-library-bumps.md` (Step 3) |
+| Check which Temporal copies end up in the build, and reduce them to `0.5.1`                           | `references/platform-library-bumps.md` (Step 4) |
 | Modernise CI: adopt `dhis2/workflows-platform` reusable workflows, bump outdated actions/Node version | `references/ci-migration.md`                    |
 | Set up continuous delivery to the App Hub                                                             | `references/apphub-release.md`                  |
 
@@ -130,10 +137,15 @@ in the future — this table is deliberately structured to grow.
   silence.
 - **`@dhis2/multi-calendar-dates`'s `3.x` is a real breaking change — don't treat it like
   the routine non-breaking bumps above.**
-  `getNowInCalendar` no longer returns anything Temporal-shaped, and — easy to miss — no
-  longer carries time-of-day at all, only `{ year, month, day, eraYear? }`. This fails
-  silently (wrong output, not an error) if a call site reads `.hour`/`.minute`/`.second` off
-  the result.
+  `getNowInCalendar` no longer returns anything Temporal-shaped (calling `.add()` etc. on it
+  throws). Target `3.2.0`+.
+- **Migrate hand-rolled calendar date code to the library's helpers — don't re-implement it.**
+  Every place the app formats a calendar date (`eraYear ?? year` + padding), adds months/
+  years/days to one (13-month calendar lists, ISO round-trips, `validateDateString` clamping
+  loops) or works out days in a month should use `formatCalendarDate`, `addToCalendarDate` or
+  `getDaysInMonth` from `3.2.0`, and the app's own helper should be deleted. Do it in its own
+  commit after the bump; the regression snapshots should stay unchanged, and any change must
+  be explained. See `references/platform-library-bumps.md` Step 2.
 - **Before bumping `@dhis2/multi-calendar-dates`, write a before/after regression test
   covering every direct import from the library** — `getNowInCalendar`, the
   period-calculation helpers (`getFixedPeriodByDate`, `getAdjacentFixedPeriods`, etc. —
@@ -158,6 +170,14 @@ in the future — this table is deliberately structured to grow.
   file is ~516 KB because the dist is minified onto one line, and that the alternative is to
   wait for the upstream fix. If reverted, leave `ethiopian` out of these tests and note the
   known issue in the PR description. See `references/platform-library-bumps.md` Step 3.
+- **After bumping `@dhis2/multi-calendar-dates` or `@js-temporal/polyfill`, check the
+  production build's source maps for Temporal copies.** The only one should be
+  `multi-calendar-dates`' vendored copy (plus a direct `@js-temporal/polyfill@0.5.1` if the
+  app imports it). Flag multiple versions in the lockfile, and any extra copy in the bundle.
+  Try to get the bundle down to `0.5.1` only: bump the package that brings the old copy in,
+  or else force `0.5.1` with `resolutions`/`pnpm.overrides` after snapshot-testing that code,
+  plus the Step 3 Ethiopic patch if Ethiopic matters for the app. See
+  `references/platform-library-bumps.md` Step 4.
 - **When matching an app to its App Hub listing, match on `d2.config.js`'s `id` first, not
   `title`.** The App Hub display name doesn't always match the repo/title name (e.g.
   `aggregate-data-entry-app`'s `title` is `Data Entry`, listed on the App Hub as just "Data
@@ -178,14 +198,13 @@ in the future — this table is deliberately structured to grow.
 
 ## Troubleshooting
 
-| Symptom                                                                                          | Fix                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Build/runtime error resolving a package that isn't declared as a direct dependency               | It was likely phantom-hoisted by yarn 1. Add it explicitly to `dependencies`/`devDependencies`, or add it to `publicHoistPattern` in `pnpm-workspace.yaml` if `@dhis2/app-shell` needs it directly.                                                            |
-| Import from a scoped subpackage fails (e.g. `@dhis2-ui/checkbox`, `@dhis2/ui-forms`)             | These have been consolidated into `@dhis2/ui`. Update the import rather than trying to hoist the old package.                                                                                                                                                  |
-| pnpm warns about ignored build scripts for a dependency                                          | Add the package to `onlyBuiltDependencies` (to allow it) or `ignoredBuiltDependencies` (to silence it) in `pnpm-workspace.yaml`, depending on whether the app actually needs that build step.                                                                  |
-| ESLint errors "Cannot find config @dhis2/config-eslint" after moving off `d2-style`              | Either it wasn't installed, or the old `.eslintrc.js` still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one. See `references/style-configs-migration.md`.                                     |
-| `stylelint`/`ls-lint` fails after moving off `d2-style`                                          | The app never had `stylelint`/`@ls-lint/ls-lint` as a direct dependency before — `cli-style` bundled and ran its own copies. Add the real tool as a devDependency, not just its `@dhis2/config-*` package. See `references/style-configs-migration.md` Step 2. |
-| A `dhis2/workflows-platform` job fails with "Cannot find module '@dhis2/cli-style'"              | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) is on `@v1` or the `pnpm` branch, which require `cli-style` — move it to `@v2`. See `references/ci-migration.md` Step 3.                                                                     |
-| A CI workflow silently never runs after switching to a reusable workflow                         | The `uses:` reference (org/repo/path/ref) is wrong — GitHub doesn't report this as a failure, the workflow just never appears in the Actions tab. See `references/ci-migration.md`.                                                                            |
-| A date/time string looks subtly wrong (not an error) after bumping `@dhis2/multi-calendar-dates` | A `getNowInCalendar` call site is reading `.hour`/`.minute`/`.second` off the new plain object, which no longer has them. See `references/platform-library-bumps.md` Step 2.                                                                                   |
-| App Hub release job fails with `EMISSINGAPPHUBID`/`EMISSINGMINDHIS2VERSION`/`EMISSINGTOKEN`      | `d2.config.js`'s `id`/`minDHIS2Version` or the `DHIS2_BOT_APPHUB_TOKEN` secret is missing, or the release job wasn't given `secrets: inherit`. See `references/apphub-release.md` Steps 2, 4-5.                                                                |
+| Symptom                                                                                     | Fix                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Build/runtime error resolving a package that isn't declared as a direct dependency          | It was likely phantom-hoisted by yarn 1. Add it explicitly to `dependencies`/`devDependencies`, or add it to `publicHoistPattern` in `pnpm-workspace.yaml` if `@dhis2/app-shell` needs it directly.                                                            |
+| Import from a scoped subpackage fails (e.g. `@dhis2-ui/checkbox`, `@dhis2/ui-forms`)        | These have been consolidated into `@dhis2/ui`. Update the import rather than trying to hoist the old package.                                                                                                                                                  |
+| pnpm warns about ignored build scripts for a dependency                                     | Add the package to `onlyBuiltDependencies` (to allow it) or `ignoredBuiltDependencies` (to silence it) in `pnpm-workspace.yaml`, depending on whether the app actually needs that build step.                                                                  |
+| ESLint errors "Cannot find config @dhis2/config-eslint" after moving off `d2-style`         | Either it wasn't installed, or the old `.eslintrc.js` still exists alongside the new flat `eslint.config.mjs` and ESLint is confused about which to use — delete the old one. See `references/style-configs-migration.md`.                                     |
+| `stylelint`/`ls-lint` fails after moving off `d2-style`                                     | The app never had `stylelint`/`@ls-lint/ls-lint` as a direct dependency before — `cli-style` bundled and ran its own copies. Add the real tool as a devDependency, not just its `@dhis2/config-*` package. See `references/style-configs-migration.md` Step 2. |
+| A `dhis2/workflows-platform` job fails with "Cannot find module '@dhis2/cli-style'"         | That job (`lint.yml`, `lint-commits.yml`, or `lint-pr-title.yml`) is on `@v1` or the `pnpm` branch, which require `cli-style` — move it to `@v2`. See `references/ci-migration.md` Step 3.                                                                     |
+| A CI workflow silently never runs after switching to a reusable workflow                    | The `uses:` reference (org/repo/path/ref) is wrong — GitHub doesn't report this as a failure, the workflow just never appears in the Actions tab. See `references/ci-migration.md`.                                                                            |
+| App Hub release job fails with `EMISSINGAPPHUBID`/`EMISSINGMINDHIS2VERSION`/`EMISSINGTOKEN` | `d2.config.js`'s `id`/`minDHIS2Version` or the `DHIS2_BOT_APPHUB_TOKEN` secret is missing, or the release job wasn't given `secrets: inherit`. See `references/apphub-release.md` Steps 2, 4-5.                                                                |
